@@ -19,7 +19,7 @@ from pathlib import Path
 # Configurações
 LATITUDE = -19.8867   # Sabará, MG
 LONGITUDE = -43.8067  # Sabará, MG
-DATA_INICIO = "1986-01-01"
+DATA_INICIO = "1997-01-01"  # GloFAS só tem dados a partir de 1997 pra essa região
 DATA_FIM = "2026-04-30"
 
 # Diretórios
