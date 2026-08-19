@@ -1,187 +1,128 @@
 # VigiaEnchente-ML
 
-Modelo de Machine Learning para previsão de enchentes no município de Sabará/MG, focado no Rio das Velhas.
+Modelo de Machine Learning para previsão de vazão fluvial D+1 no município de Sabará/MG, bacia do Alto Rio das Velhas.
 
 ## Sobre o Projeto
 
-Este repositório contém a implementação do modelo de ML desenvolvido como parte do TCC no Instituto Federal de Minas Gerais (IFMG), Campus Sabará.
+TCC desenvolvido no Instituto Federal de Minas Gerais (IFMG), Campus Sabará.
 
 ### Problema
 
-Sabará sofre historicamente com enchentes do Rio das Velhas, especialmente no período chuvoso (outubro a março). Os métodos tradicionais de previsão dependem de:
-- Interpretação manual de cada variável hidrológica
-- Experiência individual de especialistas
-- Monitoramento visual do nível do rio (régua)
+Sabará sofre historicamente com enchentes do Rio das Velhas. As estações fluviométricas da ANA foram desativadas em 1965, resultando em 60 anos sem dados de vazão locais.
 
-**Desafio adicional:** As estações fluviométricas da ANA em Sabará foram desativadas em 1965, resultando em um gap de 60 anos sem dados de vazão locais.
+### Solução
 
-### Solução Proposta
-
-Um modelo de ML que aprende a prever vazão D+1 usando apenas dados locais disponíveis:
+Modelo de regressão precipitação-vazão que aprende a prever vazão D+1 usando dados locais:
 
 ```
 FEATURES (dia D)                          TARGET (dia D+1)
 ┌─────────────────────────────────┐       ┌─────────────────┐
 │  Chuva ANA (estação 1943006)    │       │                 │
 │  ├─ precipitação diária         │       │  Vazão GloFAS   │
-│  ├─ acumulados (3d,7d,14d,30d)  │       │  (m³/s)         │
-│  └─ lags (d-1 a d-7)            │  ───► │                 │
-│                                 │       │  (referência    │
-│  Meteorologia INMET (A521)      │       │   internacional)│
-│  ├─ temperatura (max/min/média) │       │                 │
-│  └─ umidade, vento, pressão     │       └─────────────────┘
+│  ├─ acumulados (3d,7d,14d,30d)  │  ───► │  (m³/s)         │
+│  └─ API (α=0.90, k=30)          │       │                 │
+│                                 │       └─────────────────┘
+│  Meteorologia INMET (83587)     │
+│  ├─ temperatura (max/min/média) │
+│  ├─ umidade relativa            │
+│  └─ velocidade do vento         │
+│                                 │
+│  Lags autorregressivos          │
+│  ├─ vazao_lag1, vazao_lag2      │
+│  └─ chuva_lag1, chuva_lag2      │
 └─────────────────────────────────┘
 ```
 
-**Após treinado, o modelo funciona offline**, sem dependência de APIs externas.
+## Dataset Unificado
 
-## Contribuição Principal
+**Período:** 1997-01-01 a 2026-04-30 (~10.700 registros diários)
 
-> "Diante da inexistência de dados fluviométricos públicos para Sabará desde 1965, este trabalho propõe a criação de uma base de dados local de referência de vazão, utilizando o sistema GloFAS (Global Flood Awareness System) do ECMWF/Copernicus como proxy inicial. O modelo de ML treinado permitirá gerar previsões de vazão baseadas exclusivamente em dados pluviométricos e meteorológicos medidos localmente."
+| Fonte | Variáveis | Período Original |
+|-------|-----------|------------------|
+| ANA (1943006) | chuva_mm | 1941-2026 |
+| GloFAS/ECMWF | vazao (m³/s) | 1997-2026 |
+| INMET (83587) | temp_media, temp_max, temp_min, umidade_media, vento_medio | 1986-2026 |
 
-Esta abordagem é **replicável para outros 5.000+ municípios brasileiros** sem infraestrutura de monitoramento fluviométrico.
-
-## Arquitetura do Dataset
-
-| Fonte | Variável | Período | Tipo |
-|-------|----------|---------|------|
-| ANA (estação 1943006) | Precipitação diária | 1941-2025 | Medido in loco |
-| INMET (estação A521) | Temp, umidade, vento, pressão | 2006-2025 | Medido (BH, 17km) |
-| GloFAS/Open-Meteo | Vazão simulada (target) | 1984-2025 | Modelado (~5km) |
-| Defesa Civil Sabará | Eventos confirmados | 1997-2024 | Ground truth |
-
-**Período de estudo:** 2006-2025 (coincidência de todas as fontes)
-
-## Modelos Avaliados
-
-| Modelo | Tipo | Justificativa |
-|--------|------|---------------|
-| Regressão Logística | Baseline | Referência mínima de performance |
-| Random Forest | Ensemble (bagging) | Robusto, interpretável, feature importance |
-| XGBoost | Ensemble (boosting) | Melhor performance em trabalhos correlatos |
-| SVM | Kernel-based | Diversidade (não baseado em árvores) |
-
-## Métricas de Avaliação
-
-- **F1-Score** (principal) - equilíbrio entre precisão e recall
-- **Recall** - prioridade para detectar eventos reais
-- **Precision** - evitar alarmes falsos
-- **Validação contra eventos reais** - 5 enchentes confirmadas pela Defesa Civil
-
-## Baseline Operacional
-
-Regra PLANCON (Defesa Civil de Sabará):
-- Precipitação acumulada > 100mm em 72h **OU**
-- Nível do Rio das Velhas > 2.0m na Régua da Ponte do Paciência
+**Arquivo processado:** `data/processed/unified_database.csv`
 
 ## Estrutura do Repositório
 
 ```
 vigiaenchente-ml/
-├── README.md                           # Este arquivo
-├── LICENSE                             # MIT License
-├── requirements.txt                    # Dependências Python
-├── .gitignore                          # Arquivos ignorados
+├── README.md
+├── LICENSE
 │
-├── data/                               # Dados (não versionados)
-│   ├── raw/                            # Dados brutos
-│   ├── processed/                      # Dados processados
-│   └── glofas/                         # Dados GloFAS
+├── data/
+│   ├── raw/                              # Dados brutos
+│   │   ├── ana_chuva_sabara_1943006.csv  # Chuva ANA
+│   │   ├── glofas_vazao_sabara.csv       # Vazão GloFAS
+│   │   └── inmet_meteo_bh_83587.csv      # Meteorologia INMET
+│   └── processed/
+│       └── unified_database.csv          # Base unificada
 │
-├── src/                                # Código fonte
-│   ├── coleta/                         # Scripts de coleta
-│   ├── preprocessamento/               # Pré-processamento
-│   ├── features/                       # Feature engineering
-│   ├── modelos/                        # Treinamento e avaliação
-│   └── utils/                          # Utilitários
+├── src/
+│   └── processing/
+│       └── database_processor.py         # Processamento das bases
 │
-├── docs/                               # Documentação
-│   ├── decisao-base-de-dados.md        # Decisões sobre dados
-│   ├── decisao-modelos-e-experimentos.md
-│   ├── guia-coleta-dados.md
-│   ├── plano-de-acao.md
-│   └── plano-execucao-tcc.md
+├── docs/
+│   └── revisao-literatura-gemini.md      # Revisão sistemática
 │
-└── outputs/                            # Resultados (não versionados)
-    ├── modelos/                        # Modelos salvos
-    ├── figuras/                        # Gráficos gerados
-    └── metricas/                       # Métricas de avaliação
-```
-
-## Instalação
-
-```bash
-# Clonar repositório
-git clone https://github.com/phsanzio/VigiaEnchente-ML.git
-cd VigiaEnchente-ML
-
-# Criar ambiente virtual
-python -m venv venv
-source venv/bin/activate  # Linux/Mac
-# venv\Scripts\activate   # Windows
-
-# Instalar dependências
-pip install -r requirements.txt
+└── scripts/
+    └── coleta_glofas.py                  # Coleta dados GloFAS
 ```
 
 ## Execução
 
 ```bash
-# 1. Coletar dados
-python src/coleta/coletar_glofas.py
-python src/coleta/coletar_inmet.py
-
-# 2. Pré-processar
-python src/preprocessamento/processar_chuvas.py
-python src/preprocessamento/juntar_datasets.py
-
-# 3. Criar features
-python src/features/criar_features.py
-
-# 4. Treinar modelos
-python src/modelos/treinar.py
-
-# 5. Avaliar
-python src/modelos/avaliar.py
+# Processar bases e gerar unified_database.csv
+python3 src/processing/database_processor.py
 ```
 
-## Eventos de Referência (Ground Truth)
+## Features Planejadas
 
-| Data | Tipo | Vazão GloFAS | Capturado? |
-|------|------|--------------|------------|
-| Dez/1997 | Fluvial | - | ✅ |
-| 27/01/2020 | Fluvial | 20.18 m³/s | ✅ |
-| 09/01/2022 | Fluvial | 48.55 m³/s | ✅ |
-| 26/10/2023 | Urbano | 0.64 m³/s | ❌ (drenagem) |
-| 13/11/2024 | Urbano | 0.83 m³/s | ❌ (drenagem) |
+| Feature | Descrição | Status |
+|---------|-----------|--------|
+| chuva_3d, 7d, 14d, 30d | Acumulados de precipitação | Pendente |
+| api | Índice de Precipitação Antecedente (α=0.90, k=30) | Pendente |
+| vazao_lag1, lag2 | Lags autorregressivos de vazão | Pendente |
+| chuva_lag1, lag2 | Lags de precipitação | Pendente |
+| target | vazao.shift(-1) - vazão D+1 | Pendente |
 
-**Limitação conhecida:** O modelo captura eventos fluviais (subida do rio) mas não alagamentos urbanos por falha de drenagem.
+## Modelos Planejados
 
-## Justificativas Técnicas
+| Modelo | Justificativa |
+|--------|---------------|
+| XGBoost | Performance em dados tabulares, regularização |
+| Random Forest | Robusto, interpretável, feature importance |
+| Regressão Linear | Baseline |
 
-### Por que não usar vazão real da ANA (1939-1965)?
+## Métricas
 
-Os dados têm **60 anos de defasagem**. Neste período:
-- Urbanização mudou completamente o escoamento superficial
-- Uso do solo foi alterado (desmatamento, pavimentação)
-- Alterações físicas no rio (canalizações, barragens)
-- Padrões climáticos mudaram
+- RMSE (Root Mean Square Error)
+- MAE (Mean Absolute Error)
+- R² (Coeficiente de determinação)
+- KGE (Kling-Gupta Efficiency)
 
-Usar dados obsoletos criaria um modelo que aprende relações que não existem mais.
+## Eventos de Referência
 
-### Por que GloFAS como referência?
+| Data | Vazão GloFAS | Tipo |
+|------|--------------|------|
+| Jan/1997 | - | Fluvial |
+| 27/01/2020 | 20.18 m³/s | Fluvial |
+| 09/01/2022 | 48.55 m³/s (máximo histórico) | Fluvial |
+| Dez/2023 | - | Fluvial |
+| Jan/2024 | - | Fluvial |
 
-O GloFAS (Global Flood Awareness System) do ECMWF/Copernicus:
-- Fornece dados atuais (1984-presente)
-- Validação internacional para sistemas de alerta
-- Único disponível gratuitamente para Sabará
-- Resolução de ~5km é uma limitação, mas o modelo de ML ajusta localmente
+## Decisões Técnicas
 
-### Por que INMET de BH para Sabará?
+### Por que estação INMET a 17km?
+Não existe estação INMET em Sabará. A estação 83587 (BH) é a mais próxima com série longa. A distância é aceitável para eventos sinóticos (ZCAS, frentes).
 
-Consulta à API oficial do INMET confirmou: **não existe estação em Sabará**.
-A estação A521 (Pampulha, 17km de distância) é a mais próxima com série histórica adequada.
-Esta distância é meteorologicamente aceitável para eventos de precipitação intensa.
+### Por que GloFAS como target?
+Única fonte de vazão disponível para Sabará desde 1965. Validado internacionalmente pelo ECMWF/Copernicus.
+
+### Por que não usar pressão atmosférica?
+A estação 83587 (convencional) não mede pressão. Estações automáticas com pressão têm série mais curta (~2007).
 
 ## Equipe
 
@@ -189,17 +130,9 @@ Esta distância é meteorologicamente aceitável para eventos de precipitação 
 - **Carlos Alexandre Silva** - Orientador
 - **Carlos Alberto Severiano Junior** - Coorientador
 
-## Referências
-
-- [Open-Meteo Flood API](https://open-meteo.com/en/docs/flood-api)
-- [GloFAS - ECMWF](https://www.globalfloods.eu/)
-- [INMET - Dados Históricos](https://portal.inmet.gov.br/dadoshistoricos)
-- [ANA - HidroWeb](https://www.snirh.gov.br/hidroweb/)
-- [Defesa Civil de Sabará - PLANCON](https://www.sabara.mg.gov.br/defesa-civil)
-
 ## Licença
 
-Este projeto está licenciado sob a MIT License - veja o arquivo [LICENSE](LICENSE) para detalhes.
+MIT License
 
 ---
 

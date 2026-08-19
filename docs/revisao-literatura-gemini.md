@@ -1,14 +1,319 @@
-Previsão de Enchentes com Aprendizado de Máquina e Inteligência Artificial na Bacia do Rio das Velhas: Revisão Sistemática e Diretrizes Metodológicas para Sabará (MG)A modelagem preditiva de inundações em bacias hidrográficas urbanizadas constitui um dos temas mais críticos da hidrologia contemporânea e da gestão de riscos de desastres. No contexto do município de Sabará (Minas Gerais), situado na calha do Alto Rio das Velhas — sub-bacia estratégica do Rio São Francisco —, a estruturação de um sistema de alerta precoce com antecedência de 24 horas ($D+1$) exige uma formulação metodológica que integre dados pluviométricos pontuais, variáveis meteorológicas regionais, vazões simuladas por reanálises globais e registros históricos de desastres.Este relatório sintetiza o estado da arte na literatura científica internacional e nacional (2020–2026), abordando metodologias de aprendizado de máquina (Machine Learning - ML) e inteligência artificial aplicadas à previsão de cheias fluviais, fornecendo respostas aprofundadas e diretrizes técnicas para o projeto em desenvolvimento.1. Metodologia e Boas Práticas em Modelagem Hidrológica com Aprendizado de MáquinaExtensão Mínima de Séries Históricas e Representatividade HidroclimáticaA literatura hidrológica internacional estabelece que o treinamento de modelos de aprendizado de máquina para previsão de vazão e cheias requer séries temporais com extensão de 15 a 30 anos. Essa duração não se justifica apenas pelo volume amostral estatístico, mas pela necessidade física de capturar ciclos de variabilidade climática de baixa frequência e escala interanual/interdecadal, tais como o El Niño-Oscilação Sul (ENOS), a Oscilação Decadal do Pacífico (ODP) e episódios de Zona de Convergência do Atlântico Sul (ZCAS).Uma base de dados de 29 anos (~10.700 registros diários, 1997–2026) apresenta representatividade climatológica robusta. Esse horizonte temporal contempla tanto períodos secos severos (como a crise hídrica do Sudeste entre 2014 e 2015) quanto eventos pluviométricos extremos concentrados em múltiplos anos chuvosos (1997, 2020, 2022, 2023 e 2024), viabilizando o aprendizado de funções de transferência não-lineares sem incorrer em sobreajuste (overfitting) a uma única fase climática.Tratamento do Desbalanceamento Extremo de ClassesO registro de apenas 5 episódios de inundação confirmados pela Defesa Civil em 10.700 dias estabelece um cenário de desbalanceamento severo de classes, no qual a classe minoritária positiva representa menos de 0,05% da base total. A modelagem direta por classificação binária padrão tende a colapsar em classificadores triviais de acurácia aparente de 99,95%, incapazes de identificar qualquer evento crítico.A literatura técnica aponta três vias principais de mitigação:Reponderação por Sensibilidade ao Custo (Cost-Sensitive Learning): Ajuste de penalidades assimétricas na função de perda durante o treinamento. Em algoritmos baseados em árvores de decisão impulsionadas por gradiente (Gradient Boosting Decision Trees - GBDT), ajusta-se o hiperparâmetro scale_pos_weight, definido teoricamente pela razão entre as instâncias negativas e positivas:
-$$\text{scale\_pos\_weight} = \frac{N_{\text{neg}}}{N_{\text{pos}}}$$Alternativamente, funções de perda como a Focal Loss modulam dinamicamente os gradientes, reduzindo o peso atribuído a amostras negativas facilmente classificáveis e concentrando a otimização nos limiares raros de transição de cheia.Amostragem Sintética Temporal Controlada: A aplicação direta e irrestrita de técnicas clássicas como SMOTE (Synthetic Minority Over-sampling Technique) em séries temporais corrompe a autocorrelação física entre passos de tempo subsequentes. Quando utilizada, a síntese de dados deve ser restrita ao conjunto de treinamento e executada via amostragem em blocos contíguos (Time-Series Block Oversampling) ou interpolação de perfis hidrodinâmicos em torno dos hidrogramas de cheia observados.Modelagem Contínua em Dois Estágios: A abordagem mais consensual e estável consiste em formular o problema primário não como uma classificação binária pura, mas como uma regressão contínua para predição da vazão diária simulada ($Q_{t+1}$) ou de um índice contínuo de severidade hídrica. Os alertas categóricos da Defesa Civil são derivados em um segundo estágio, aplicando-se limiares de corte calibrados sobre a distribuição contínua estimada.Estratégia de Partição Temporal e Prevenção de Vazamento de DadosEm dados hidrometeorológicos, o uso de validação cruzada $k$-fold com embaralhamento aleatório (random shuffling) é terminantemente inadequado, pois incorre em vazamento de dados (data leakage) temporal. A memória do sistema hídrico — manifestada no teor de umidade do solo, fluxo de base e níveis freáticos — gera forte dependência serial entre dias vizinhos.A literatura prescreve duas abordagens temporalmente consistentes:Validação Temporal Expansiva (Expanding Window / Walk-Forward Cross-Validation): O modelo é treinado em uma janela inicial e validado no período cronologicamente seguinte; progressivamente, a janela de treino expande-se para incorporar o período avaliado, testando no passo temporal subsequente.Partição Cronológica em Blocos Fechados: Para o horizonte 1997–2026, recomenda-se uma segmentação tripartite:Conjunto de Treinamento e Calibração (1997–2015, ~19 anos): Fornece o histórico básico de processos hidrológicos e o evento extremo de 1997.Conjunto de Validação e Ajuste de Hiperparâmetros (2016–2019, ~4 anos): Utilizado para calibração fina de pesos, limiares de probabilidade e regularização.Conjunto de Teste Cego (Out-of-Sample, 2020–2026, ~6 anos): Mantido estritamente isolado para a avaliação final de desempenho, contendo quatro dos cinco desastres históricos (2020, 2022, 2023, 2024), simulando com fidelidade as condições operacionais de uso.Métricas de Desempenho para Eventos CríticosA acurácia global e a área sob a curva ROC (ROC-AUC) exibem viés otimista enganoso em conjuntos hiperdesbalanceados, pois a curva ROC considera a taxa de falsos alarmes normalizada pela vasta massa de verdadeiros negativos. A avaliação de modelos de alerta hidrológico exige métricas assentadas exclusivamente na classe de interesse.MétricaExpressão MatemáticaFinalidade e Relevância OperacionalPrecision$\frac{VP}{VP + FP}$Avalia a confiabilidade dos alertas emitidos, quantificando a taxa de falsos alarmes que degradam a credibilidade pública da Defesa Civil.Recall (Sensibilidade)$\frac{VP}{VP + FN}$Avalia a capacidade de detecção de eventos catastróficos, medindo a taxa de omissões críticas que colocam vidas humanas em perigo.$F_1\text{-Score}$$2 \cdot \frac{\text{Precision} \cdot \text{Recall}}{\text{Precision} + \text{Recall}}$Média harmônica balanceada entre precisão e sensibilidade, penalizando modelos com desempenhos unilaterais.PR-AUC$\int \text{Precision}(R) \, dR$Área sob a curva Precisão-Recall; métrica prioritária para seleção de modelos e ajuste de limiares em eventos raros.Critical Success Index (CSI)$\frac{VP}{VP + FP + FN}$Padrão-ouro em hidrologia operacional (Threat Score); descarta verdadeiros negativos e avalia o sucesso estrito sobre o evento observado ou previsto.Peirce Skill Score (PSS)$\frac{VP \cdot VN - FP \cdot FN}{(VP + FN)(FP + VN)}$Mede a destreza do modelo em relação a um acerto puramente aleatório, sendo independente da frequência climatológica do evento.Kling-Gupta Efficiency (KGE)$1 - \sqrt{(r-1)^2 + (\beta-1)^2 + (\gamma-1)^2}$Métrica prioritária na etapa de regressão contínua de vazão, integrando correlação ($r$), viés volumétrico ($\beta$) e variabilidade ($\gamma$).Definição de Limiares de Alerta sem Fluviometria LocalQuando inexiste uma estação linimétrica com curva-chave calibrada diretamente no trecho urbano de interesse, a literatura internacional de sistemas de alerta precoce preconiza o método da Climatologia Consistente do Modelo.Em vez de se fixar um valor arbitrário de vazão em metros cúbicos por segundo ($m^3/s$), a série simulada contínua de 29 anos (GloFAS) é submetida a uma análise de frequência estatística para determinação de percentis empíricos de recorrência:Nível de Atenção: Corresponde ao percentil 95 ($P_{95}$) da série histórica simulada de vazão, indicando elevação anômala com probabilidade de mobilização das equipes de monitoramento.Nível de Alerta: Corresponde ao percentil 98 ($P_{98}$), associado a um período de retorno de cheia ordinária (1 a 2 anos), exigindo emissão de comunicados preventivos.Nível de Inundação / Emergência: Corresponde ao percentil 99,5 ($P_{99.5}$), limiar estatístico de cauda superior no qual se concentraram os picos de vazão dos eventos de cheia registrados pela Defesa Civil.A validação e o ajuste fino desses pontos de corte operacionais são realizados cruzando-se a matriz de confusão gerada contra os cinco eventos históricos, maximizando iterativamente o índice CSI e o Peirce Skill Score.2. Features e Engenharia de Variáveis HidrometeorológicasA transformação física da chuva em vazão e a subsequente inundação dependem criticamente do estado prévio do solo e do balanço energético da bacia. Modelos de aprendizado de máquina não processam a complexidade termodinâmica do sistema a menos que recebam variáveis explicativas derivadas que representem a memória hidrológica.Janelas Temporais de Precipitação e Condição de Umidade Antecedente (AMC)A resposta hidrológica da calha do Rio das Velhas em Sabará integra processos de escoamento superficial direto (runoff rápido) de seus tributários urbanos com a propagação de ondas de cheia lentas formadas nas cabeceiras da bacia. As janelas de agregação temporal desempenham funções físicas distintas:Precipitação Acumulada em 1 a 3 dias ($P_{1d}, P_{2d}, P_{3d}$): Representa a forçante imediata responsável pelo escoamento superficial direto e cheias rápidas de afluentes íngremes e impermeabilizados.Precipitação Acumulada em 7 e 14 dias ($P_{7d}, P_{14d}$): Governa a saturação progressiva dos horizontes superficiais do solo (latossolos e cambissolos regionais), reduzindo drasticamente a capacidade de infiltração da bacia.Precipitação Acumulada em 30 dias ($P_{30d}$): Modula a elevação do lençol freático e o volume de fluxo de base (baseflow), determinando o nível basal do rio antes da chegada de uma nova tempestade.Para modelar matematicamente a condição de umidade antecedente (Antecedent Soil Moisture Condition - AMC) sem a necessidade de sensores in situ de umidade do solo, utiliza-se o Índice de Precipitação Antecedente ($API$):
+# Previsão de Enchentes com Aprendizado de Máquina e Inteligência Artificial na Bacia do Rio das Velhas
+
+## Revisão Sistemática e Diretrizes Metodológicas para Sabará (MG)
+
+> **Fonte:** Revisão gerada por IA (Gemini)  
+> **Data:** Agosto 2026  
+> **Escopo:** Estado da arte em ML/IA para previsão de cheias (2020-2026)
+
+---
+
+## Introdução
+
+A modelagem preditiva de inundações em bacias hidrográficas urbanizadas constitui um dos temas mais críticos da hidrologia contemporânea e da gestão de riscos de desastres.
+
+No contexto do município de **Sabará (Minas Gerais)**, situado na calha do Alto Rio das Velhas — sub-bacia estratégica do Rio São Francisco —, a estruturação de um sistema de alerta precoce com antecedência de 24 horas (D+1) exige uma formulação metodológica que integre:
+
+- Dados pluviométricos pontuais
+- Variáveis meteorológicas regionais
+- Vazões simuladas por reanálises globais
+- Registros históricos de desastres
+
+Este relatório sintetiza o estado da arte na literatura científica internacional e nacional (2020–2026), abordando metodologias de aprendizado de máquina (Machine Learning - ML) e inteligência artificial aplicadas à previsão de cheias fluviais.
+
+---
+
+## 1. Metodologia e Boas Práticas em Modelagem Hidrológica com ML
+
+### 1.1 Extensão Mínima de Séries Históricas
+
+A literatura hidrológica internacional estabelece que o treinamento de modelos de ML para previsão de vazão e cheias requer **séries temporais com extensão de 15 a 30 anos**.
+
+Essa duração se justifica pela necessidade física de capturar ciclos de variabilidade climática:
+- El Niño-Oscilação Sul (ENOS)
+- Oscilação Decadal do Pacífico (ODP)
+- Zona de Convergência do Atlântico Sul (ZCAS)
+
+Uma base de dados de **29 anos (~10.700 registros diários, 1997–2026)** apresenta representatividade climatológica robusta, contemplando:
+- Períodos secos severos (crise hídrica 2014-2015)
+- Eventos pluviométricos extremos (1997, 2020, 2022, 2023, 2024)
+
+### 1.2 Tratamento do Desbalanceamento de Classes
+
+O registro de apenas **5 episódios de inundação** em 10.700 dias estabelece um cenário de **desbalanceamento severo** (classe positiva < 0,05% da base total).
+
+**Três vias principais de mitigação:**
+
+1. **Cost-Sensitive Learning:** Ajuste de penalidades assimétricas na função de perda
+   - Hiperparâmetro `scale_pos_weight` em GBDT
+   - Focal Loss para modular gradientes
+
+2. **Amostragem Sintética Temporal Controlada:**
+   - SMOTE tradicional corrompe autocorrelação temporal
+   - Usar Time-Series Block Oversampling
+
+3. **Modelagem Contínua em Dois Estágios (RECOMENDADO):**
+   - Estágio 1: Regressão contínua para vazão Q(t+1)
+   - Estágio 2: Limiares de corte para alertas categóricos
+
+### 1.3 Partição Temporal e Prevenção de Data Leakage
+
+> **IMPORTANTE:** Validação cruzada k-fold com embaralhamento aleatório é **terminantemente inadequada** para dados hidrometeorológicos.
+
+**Abordagens recomendadas:**
+
+1. **Walk-Forward Cross-Validation:** Janela expansiva de treino
+
+2. **Partição Cronológica em Blocos:**
+   - **Treino (1997–2015):** ~19 anos, histórico básico + evento 1997
+   - **Validação (2016–2019):** ~4 anos, ajuste de hiperparâmetros
+   - **Teste (2020–2026):** ~6 anos, avaliação final com 4 dos 5 desastres
+
+### 1.4 Métricas de Desempenho
+
+> Acurácia global e ROC-AUC são **enganosas** em conjuntos desbalanceados.
+
+| Métrica | Fórmula | Finalidade |
+|---------|---------|------------|
+| **Precision** | VP / (VP + FP) | Confiabilidade dos alertas |
+| **Recall** | VP / (VP + FN) | Capacidade de detecção |
+| **F1-Score** | 2 × (Prec × Rec) / (Prec + Rec) | Balanceamento |
+| **PR-AUC** | Área sob curva Precisão-Recall | Seleção de modelos |
+| **CSI** | VP / (VP + FP + FN) | Padrão-ouro em hidrologia |
+| **KGE** | 1 - √[(r-1)² + (β-1)² + (γ-1)²] | Regressão de vazão |
+
+### 1.5 Definição de Limiares de Alerta (sem Fluviometria Local)
+
+Método da **Climatologia Consistente do Modelo:**
+
+| Nível | Percentil | Significado |
+|-------|-----------|-------------|
+| **Atenção** | P95 | Elevação anômala, mobilização de equipes |
+| **Alerta** | P98 | Período de retorno 1-2 anos |
+| **Emergência** | P99.5 | Concentração dos picos de cheia históricos |
+
+---
+
+## 2. Features e Engenharia de Variáveis
+
+### 2.1 Janelas Temporais de Precipitação
+
+| Janela | Mecanismo Físico |
+|--------|------------------|
+| **P(1-3d)** | Escoamento superficial direto, cheias rápidas |
+| **P(7-14d)** | Saturação do solo, redução de infiltração |
+| **P(30d)** | Elevação do lençol freático e fluxo de base |
+
+### 2.2 Índice de Precipitação Antecedente (API)
+
 $$API_t = \sum_{i=1}^{k} \alpha^i P_{t-i}$$
-Em que $P_{t-i}$ é a precipitação pluviométrica observada $i$ dias antes do dia $t$, e $\alpha$ é o fator empírico de decaimento diário por evapotranspiração e drenagem gravitacional. Para o clima tropical semiúmido de Minas Gerais, a literatura hidrológica recomenda valores de $\alpha$ situados no intervalo de $0,88$ a $0,92$, calculados ao longo de uma janela de memória $k = 30\text{ dias}$.Contribuição de Variáveis Micrometeorológicas e Estrutura de LagsAs variáveis coletadas na estação INMET (Belo Horizonte - 83587) fornecem informações indiretas sobre a termodinâmica atmosférica e as perdas do sistema hídrico:Pressão Atmosférica e Tendência Barométrica ($\Delta \text{Press}_{24h}$): Variações negativas abruptas na pressão atmosférica em escala regional sinalizam a aproximação de cavados pré-frontais ou a intensificação de canais de umidade da ZCAS, fenômenos causadores das maiores precipitações acumuladas na bacia.Umidade Relativa do Ar e Déficit de Pressão de Vapor (VPD): O VPD modula a demanda evaporativa da atmosfera. Elevada umidade relativa combinada com baixo VPD durante períodos consecutivos inibe a evapotranspiração, mantendo a bacia saturada.Temperatura do Ar (Mínima, Máxima e Média): Atua como forçante básica em equações simplificadas de evapotranspiração potencial (ex.: método de Hargreaves-Samani) e como proxy para regimes de convecção térmica local.Velocidade do Vento: Forçante aerodinâmica interveniente no balanço de energia e na movimentação de massas de ar úmido sobre o relevo do Quadrilátero Ferrífero.A estruturação temporal da matriz de atributos para a previsão no instante $D+1$ requer a inclusão explícita de defasagens temporais (lags) de $t, t-1, t-2$ para todas as variáveis meteorológicas e para a própria série de vazão simulada do GloFAS, garantindo a captura do estado hidrodinâmico imediatamente anterior.Variável / AtributoFormulação / DefasagemMecanismo Físico Hidrológico$P_{\text{diária}}$ (ANA 1943006)$P_t, P_{t-1}, P_{t-2}$Precipitação observada local incidente sobre a bacia direta.$P_{\text{acumulada}}$ (3 dias)$\sum_{i=0}^{2} P_{t-i}$Escoamento superficial direto rápido em afluentes metropolitanos.$P_{\text{acumulada}}$ (7 e 14 dias)$\sum_{i=0}^{6} P_{t-i}, \sum_{i=0}^{13} P_{t-i}$Saturação do perfil edáfico e início de escoamento hortoniano.$P_{\text{acumulada}}$ (30 dias)$\sum_{i=0}^{29} P_{t-i}$Elevação da vazão de base (baseflow) e recarga freática.Índice $API$$\alpha = 0,90; k = 30\text{ dias}$Proxy contínuo da umidade antecedente do solo e balanço hídrico.Pressão Barométrica$\text{Press}_t, \Delta \text{Press}_{24h}$Forçante sinótica de frentes frias e ZCAS.Déficit de Pressão de Vapor (VPD)Derivado de $T_t$ e $\text{UR}_t$Controle termodinâmico da taxa de evapotranspiração real.Vazão GloFAS Antecedente$Q_{\text{GloFAS}, t}, Q_{\text{GloFAS}, t-1}$Nível hidrodinâmico e vazão pré-existente na calha principal.Necessidade de Normalização e Padronização de VariáveisA etapa de pré-processamento de atributos depende estritamente das famílias algorítmicas empregadas:Modelos Baseados em Árvores (Random Forest, XGBoost): São invariantes a transformações monotônicas nas variáveis de entrada. Nesses modelos, a normalização, padronização ou transformações logarítmicas de variáveis pluviométricas não alteram a localização dos pontos de corte ótimos (splits) nas árvores de decisão.Modelos Lineares e Kernelizados (Regressão Logística, SVM, MLP): Exigem obrigatoriamente a padronização das variáveis explicativas. O uso do Escalonador Robusto (RobustScaler) ou do Z-Score ($z = (x - \mu)/\sigma$) é mandatório; caso contrário, preditores com escalas elevadas (ex.: $P_{30d} > 400\text{ mm}$) dominam a função de custo do gradiente e as medidas de distância euclidiana em detrimento de variáveis com menores variações absolutas (ex.: pressão atmosférica ou temperatura). Todos os parâmetros de escalonamento ($\mu, \sigma$ ou mediana/IQR) devem ser calculados exclusivamente no conjunto de treino e aplicados subsequentemente na validação/teste para impedir vazamento de dados.3. Fontes de Dados, Reanálises Globais e Heterogeneidade EspacialGloFAS como Alvo Hidrológico em Bacias sem MonitoramentoO Global Flood Awareness System (GloFAS), operacionalizado pelo ECMWF e pelo Joint Research Centre (JRC), baseia-se no acoplamento das forçantes atmosféricas do ERA5 ao modelo hidrológico distribuído LISFLOOD e a um módulo de propagação fluvial em canais.Na literatura internacional, o produto GloFAS-ERA5 Reanalysis v3/v4 é amplamente documentado como referencial hidrológico para calibração e treinamento de modelos em regiões desprovidas de dados fluviométricos in situ, demonstrando destreza positiva (KGE skill score $> 0$) em mais de 80% das bacias analisadas globalmente.No entanto, o uso do GloFAS impõe limitações hidrológicas que devem ser consideradas no estudo:Resolução Espacial da Grade (~0,1° ou ~5 a 10 km): A discretização espacial do modelo atenua gradientes topográficos acentuados e amortece picos de cheia súbitos provocados por tempestades convectivas isoladas de sub-bacia.Viés Volumétrico Sistemático: Erros sistemáticos na estimativa de precipitação do ERA5 em terrenos acidentados tropicais geram desvios no volume acumulado simulado ($P_{\text{bias}} \ne 0$).Contorno via Calibração Relativa: Para fins de alerta precoce, a literatura recomenda não utilizar o valor absoluto em $m^3/s$ gerado pelo GloFAS como verdade de campo direta, mas sim explorar sua habilidade de correlacionar anomalias e ordenar a severidade de eventos extremos via distribuição de quantis (Quantile Mapping).Uso de Reanálise (ERA5) versus Medições Pluviométricas LocaisEmbora produtos de reanálise atmosférica e satélite (ERA5, CHIRPS, MERGE) apresentem ampla cobertura contínua no tempo e no espaço, sua aplicação direta em bacias de cabeceira com relevo movimentado frequentemente subestima intensidades máximas de chuva diária.Por essa razão, a metodologia adotada — que utiliza a precipitação observada localmente pela estação da ANA (1943006) associada a dados climáticos do INMET (83587) para treinar o modelo — preserva a assinatura física de tempestades intensas que a grade do ERA5 tende a suavizar.Justificativa para o Uso de Estação Meteorológica a 15 km de DistânciaA distância espacial de aproximadamente 15 km entre a estação meteorológica INMET (Belo Horizonte - 83587) e a sede de Sabará é plenamente justificável pela física dos fenômenos deflagradores de cheias no Sudeste brasileiro:Escala Sinótica dos Desastres: Os cinco eventos de inundação confirmados em Sabará (1997, 2020, 2022, 2023, 2024) não decorreram de pancadas convectivas ultralocais de verão, mas de episódios prolongados de ZCAS e atuação de sistemas frontais semi-estacionários. Tais fenômenos possuem escala espacial regional de centenas de quilômetros, garantindo forte homogeneidade espacial em variáveis como pressão atmosférica, umidade relativa e gradiente térmico em um raio de 15 a 30 km.Integração Multiescalar: Enquanto as variáveis termodinâmicas regionais são representadas pela estação INMET, a heterogeneidade espacial pluviométrica é ancorada pelo pluviômetro local da ANA (1943006) em Sabará, resultando em uma combinação consistente com a dinâmica atmosférica regional.4. Modelos, Algoritmos e Paradigmas ComputacionaisModelos Baseados em Árvores versus Deep Learning em Dados Hidrológicos TabularesExiste atualmente um consenso consolidado na literatura de ciência de dados e hidrologia sobre a superioridade de modelos baseados em árvores (Gradient Boosted Decision Trees - XGBoost, LightGBM, CatBoost e Random Forest) em relação a redes neurais profundas (Deep Learning - LSTM, GRU, Transformers) quando aplicados a conjuntos de dados tabulares estruturados com menos de 50.000 a 100.000 amostras.No trabalho de referência de Grinsztajn, Oyallon e Varoquaux (NeurIPS 2022), foram demonstradas as razões estruturais dessa superioridade em dados tabulares:As superfícies de decisão dos modelos de árvore baseiam-se em partições ortogonais nos eixos, sendo ideais para capturar funções não-lineares com formato de degrau, típicas de limiares hidrológicos de infiltração, capacidade de campo e transbordamento.Redes neurais profundas impõem vieses indutivos de suavidade contínua (smoothness), tendendo a achatar picos extremos e apresentando alta sensibilidade a ruídos em variáveis não correlacionadas.Em séries temporais diárias de 29 anos (~10.700 amostras), arquiteturas neurais complexas (LSTM/GRU) sofrem com a carência de dados para generalização de cauda (data starvation), apresentando maior propensão a sobreajustar o histórico em comparação ao XGBoost e ao Random Forest.AlgoritmoComplexidade ParamétricaTratamento de DesbalanceamentoPrincipais VantagensPrincipais LimitaçõesXGBoostAltaExcelente (scale_pos_weight, Focal Loss)Alta capacidade de generalização; regularização $L_1/L_2$; modelagem precisa de limiares.Requer busca refinada de hiperparâmetros para evitar sobreajuste a ruídos.Random ForestMédiaAlta (class_weight='balanced_subsample')Redução drástica de variância via bagging; imune a overfitting moderado.Limitação para extrapolar valores contínuos estritamente fora da faixa observada.SVM (RBF Kernel)MédiaModerada (class_weight='balanced')Mapeamento não-linear eficiente em espaços transformados de alta dimensão.Custo computacional elevado ($O(N^2)$); alta sensibilidade à normalização de dados.Regressão LogísticaBaixaBaixa a Moderada (Penalização elástica)Transparência total nos coeficientes (odds ratio); linha de base analítica rápida.Incapaz de modelar interações não-lineares sem engenharia polinomial prévia.LSTM / GRUMuito AltaBaixa em amostras restritas ($N < 50\text{k}$)Aprende dependências sequenciais e temporais de longo prazo diretamente na entrada.Treinamento instável em séries tabulares curtas com eventos raros; explicabilidade opaca.Hiperparâmetros Críticos para OtimizaçãoA calibração de hiperparâmetros deve ser executada através de Otimização Bayesiana (Bayesian Optimization) ou busca em grade (Grid Search) acoplada à validação temporal:XGBoost:max_depth: Limitar entre 3 e 6 para conter árvores excessivamente profundas que memorizam dias anômalos.learning_rate ($\eta$): Ajustar entre 0,01 e 0,05, associado ao critério de parada antecipada (early_stopping_rounds = 50) baseado na perda do conjunto de validação temporal.scale_pos_weight: Otimizar no intervalo entre $\frac{N_{\text{neg}}}{N_{\text{pos}}}$ e $\sqrt{\frac{N_{\text{neg}}}{N_{\text{pos}}}}$ para modular a sensibilidade da detecção de cheias.subsample e colsample_bytree: Variar entre 0,7 e 0,9 para induzir descorrelação estocástica entre os estimadores fracos.reg_alpha ($L_1$) e reg_lambda ($L_2$): Ajustar termos de regularização para penalizar a complexidade das folhas.Random Forest:n_estimators: Entre 300 e 1000 árvores para estabilização assintótica do erro.min_samples_leaf e min_samples_split: Fixar valores mínimos ($5 \le \text{leaf} \le 20$) para evitar partições terminais orientadas a ruídos de medição pluviométrica.max_features: Selecionar frações como sqrt ou log2 para assegurar diversidade no espaço de atributos.Support Vector Machines (SVM):C: Parâmetro de regularização da margem suave.gamma: Coeficiente de curvatura do kernel de base radial (RBF).Métodos de Ensemble e Meta-Aprendizado (Stacking)A literatura demonstra que a combinação sinérgica de algoritmos heterogêneos por meio de um Meta-Classificador (Stacking Ensemble) supera sistematicamente modelos individuais em problemas de previsão de extremos hidrológicos.Recomenda-se uma arquitetura de Stacking em dois níveis:Modelos Base (Nível 0): XGBoost, Random Forest e SVM com kernel RBF gerando predições probabilísticas contínuas por validação temporal cruzada out-of-fold.Meta-Modelo (Nível 1): Uma Regressão Logística regularizada ($L_2$) que recebe as probabilidades dos modelos base e aprende os pesos ideais de ponderação para cada estado hidrológico.5. Estudos de Caso, Modelagem Híbrida e Contexto Regional de Minas GeraisDinâmica de Cheias na Bacia do Alto Rio das VelhasO Alto Rio das Velhas possui área de drenagem caracterizada pelo relevo acidentado do Quadrilátero Ferrífero, com cabeceiras em Ouro Preto e passagens por Itabirito, Rio Acima, Raposos, Sabará e Santa Luzia. Essa porção da bacia combina alta energia de relevo a montante com planícies aluviais intensamente ocupadas a jusante, tornando o trecho de Sabará um dos pontos de estrangulamento mais vulneráveis da calha central.Nos eventos históricos mapeados, precipitações contínuas de ZCAS superaram $400\text{ mm}$ em períodos de 10 a 15 dias, gerando vazões superiores a $500\text{ m}^3/\text{s}$ na captação de Nova Lima e transbordamento generalizado das margens em Sabará.EventoForçante Sinótica PredominanteResposta Hidrológica ObservadaDanos e Impactos em Sabará e Região1997 (Jan/Fev)ZCAS contínua e persistente sobre a bacia.Enchente generalizada no Médio e Alto Rio das Velhas; saturação prolongada da bacia.Inundação de vias públicas e áreas habitadas na calha urbana.2020 (Janeiro)ZCAS combinada com tempestades convectivas extremas na RMBH.Rápida elevação da calha; extravasamento em múltiplos tributários.Desabrigados em Sabará e Raposos; invasão de residências e comércios.2022 (Janeiro)Episódio severo de ZCAS (15 dias ininterruptos de chuva).Vazão de pico de $530\text{ m}^3/\text{s}$ no Alto Rio das Velhas; transbordamento da calha principal.Inundação do bairro Paciência e condomínio Scharlé em Sabará; calamidade regional.2023 (Dez/Jan)Sistemas frontais sucessivos e instabilidade tropical concentrada.Elevação contínua dos afluentes e calha do Rio das Velhas.Alagamentos em ruas marginais e deslizamentos em encostas urbanas.2024 (Jan/Fev)Episódios convectivos sobre a bacia do Alto São Francisco.Níveis fluviométricos acima das cotas de atenção operacional.Monitoramento preventivo e acionamento de alertas pela Defesa Civil.Modelagem Híbrida Chuva-Vazão (Physics-Informed ML)A modelagem hidrológica brasileira recente tem convergido para a hibridização entre modelos conceituais baseados em processos físicos (como o SMAP — Soil Moisture Accounting Procedure — ou o modelo francês GR4J) e algoritmos de aprendizado de máquina.Em estudos conduzidos na bacia do Rio São Francisco (reservatórios de Sobradinho e Três Marias), demonstrou-se que os modelos conceituais fornecem trajetórias coerentes com a conservação de massa e a evapotranspiração regional, mas apresentam limitações na previsão de picos abruptos e dinâmicas de curto prazo.A arquitetura híbrida opera acoplando o XGBoost como um modelo de correção de resíduos hidrológicos:O modelo conceitual (SMAP) é executado com entradas pluviométricas para simular os estoques de água no solo ($R_{\text{solo}}$) e no aquífero subterrâneo ($R_{\text{sub}}$).O algoritmo XGBoost recebe simultaneamente as variáveis meteorológicas brutas e os estados físicos internos simulados pelo SMAP, prevendo o resíduo da vazão ($e_t = Q_{\text{obs}, t} - Q_{\text{SMAP}, t}$).A vazão final consiste na soma da estimativa conceitual com a correção de resíduos aprendida pelo modelo de ML, elevando expressivamente os índices de Nash-Sutcliffe (NSE) e Kling-Gupta (KGE) em relação aos modelos isolados.Sistemas Operacionais de Alerta Precoce (SACE/CPRM e CEMADEN)A operação de monitoramento e alerta contra inundações no Brasil é ancorada por duas estruturas institucionais:SACE (Sistema de Alerta de Eventos Críticos / Serviço Geológico do Brasil - SGB/CPRM): Opera o Sistema de Alerta Hidrológico da Bacia do Rio das Velhas (SAH Velhas), monitorando a rede telemétrica oficial da ANA e transmitindo boletins diários de previsão de nível para cidades a jusante como Jequitibá, Santo Hipólito e Várzea da Palma. O SACE adota três cotas limiares padronizadas: Atenção, Alerta e Inundação (definida pela cota da soleira da primeira edificação urbana atingida pelas águas). Contudo, a sede de Sabará não dispõe atualmente de um posto fluviométrico telemétrico com modelagem hidrodinâmica em tempo real dentro do SAH Velhas.CEMADEN (Centro Nacional de Monitoramento e Alertas de Desastres Naturais): Monitora em tempo real os riscos geo-hidrológicos em municípios mapeados, integrando dados de radar, modelos numéricos de tempo (Eta, WRF) e a rede nacional de pluviômetros automáticos. O CEMADEN emite comunicados formais de risco hidrológico (Moderado, Alto, Muito Alto) para o CENAD e para as Defesas Civis municipais, subsidiando planos de contingência locais.6. Não-Estacionaridade, Urbanização e Tipologia de Eventos ExtremosValidade do Uso de Séries Fluviométricas Históricas Antigas (1939–1965)A utilização direta de registros fluviométricos de 60 a 80 anos atrás para treinar modelos contemporâneos de aprendizado de máquina em bacias metropolitanas viola o pressuposto fundamental de estacionaridade hidrológica.Nas últimas seis décadas, a bacia do Alto Rio das Velhas sofreu transformações antrópicas profundas:A expansão urbana desordenada e a conurbação da Região Metropolitana de Belo Horizonte (RMBH) elevaram a taxa de impermeabilização do solo de menos de 10% para mais de 70% em sub-bacias metropolitanas como a do Ribeirão Arrudas.A substituição de cobertura vegetal natural por asfalto e concreto reduziu a infiltração e o tempo de concentração ($t_c$), elevando substancialmente o número da curva de escoamento (Curve Number - CN).Atividades históricas de mineração e ocupação de margens alteraram a batimetria e a seção transversal do Rio das Velhas por processos contínuos de assoreamento.Consequentemente, a função de transferência física chuva-vazão de 1950 não é equivalente à de 2026. Um mesmo volume de precipitação diária de $80\text{ mm}$ gerava uma elevação moderada e amortecida na década de 1950, mas produz hidrogramas com tempos de ascensão curtos e vazões de pico significativamente mais elevadas no cenário atual.Recomenda-se:Série Antiga (1939–1965): Utilizar exclusivamente em análises climatológicas para estimar o período de retorno e a distribuição de probabilidades de chuvas intensas.Treinamento de Aprendizado de Máquina: Conduzir a modelagem estritamente na base contemporânea (1997–2026), que reflete a matriz de uso e ocupação do solo e as condições hidrogeomorfológicas atuais da bacia.O Efeito Hidráulico de Remanso na Confluência do Ribeirão ArrudasEm Sabará ocorre um fenômeno hidrodinâmico de extrema criticidade: a foz do Ribeirão Arrudas. O Arrudas drena uma bacia de $206\text{ km}^2$ quase integralmente canalizada e urbanizada na capital mineira e em Contagem.Em eventos de chuvas intensas na RMBH, a onda de cheia do Arrudas desloca-se com altíssima velocidade e energia cinética em direção ao Rio das Velhas. Quando o Rio das Velhas já se encontra com níveis elevados, surge um barramento hidráulico natural no exutório, deflagrando o efeito de remanso (backwater effect). O remanso provoca a elevação dos níveis d'água a montante da confluência e o transbordamento antecipado em bairros lindeiros de Sabará.A consideração de preditores pluviométricos e de pressão da estação INMET de Belo Horizonte (83587) é vital exatamente para antecipar o deflúvio rápido do Ribeirão Arrudas antes que sua onda de cheia atinja a confluência em Sabará.Segregação entre Inundações Fluviais e Alagamentos Pluviais UrbanosA validação de modelos hidrológicos operacionais exige a distinção rigorosa entre duas tipologias de desastres:Inundação Fluvial (Riverine Flooding): Transbordamento da calha principal do Rio das Velhas provocado por chuvas volumosas e persistentes na bacia hidrográfica, com tempos de elevação de 12 a 48 horas. Compatível com a escala diária de modelagem e o horizonte preditivo $D+1$.Alagamento Pluvial / Enxurrada Urbana (Flash / Pluvial Flooding): Acúmulo superficial de água resultante da insuficiência ou estrangulamento pontual de galerias de microdrenagem sob tempestades convectivas sub-diárias (minutos a horas), ocorrendo com a calha do rio principal ainda dentro dos níveis de normalidade.A validação de um modelo preditivo regional diário contra registros da Defesa Civil restritos a alagamentos pluviais de microdrenagem contamina as métricas de avaliação. O conjunto de validação deve ser filtrado para contemplar exclusivamente eventos confirmados de transbordamento fluvial do Rio das Velhas e seus afluentes diretos.7. Diretrizes Práticas de Implementação e Perspectivas FuturasSíntese do Pipeline Preditivo Operacional para SabaráO sistema preditivo no horizonte $D+1$ deve ser estruturado em um pipeline computacional modular:[Dados Diários ANA 1943006 + INMET 83587] ──► [Engenharia: Acumulados, API, Lags, ΔPressão]
-                                                              │
-                                                              ▼
-[Série Contínua GloFAS (1997–2026)] ───────► [Modelagem Contínua de Vazão D+1 (XGBoost/RF)]
-                                                              │
-                                                              ▼
-                             [Mapeamento de Percentis Operacionais: P95, P98, P99.5]
-                                                              │
-                                                              ▼
-                             [Emissão de Alertas Categóricos e Validação Defesa Civil]
-Ingestão e Engenharia de Atributos: Extração diária de dados do pluviômetro ANA 1943006 e da estação INMET 83587; cálculo automatizado dos acumulados ($P_{1d}, P_{3d}, P_{7d}, P_{14d}, P_{30d}$), do índice $API$ ($\alpha=0,90$) e da variação barométrica $\Delta \text{Press}_{24h}$.Modelagem Contínua de Vazão (Nível 1): Treinamento de regressores XGBoost e Random Forest para prever a vazão contínua $Q_{t+1}$ tendo a série GloFAS-ERA5 como alvo, com calibração orientada pela eficiência de Kling-Gupta (KGE).Mapeamento de Limiares e Alertas (Nível 2): Conversão da vazão contínua predita em categorias operacionais através dos percentis climatológicos do modelo ($P_{95}$ para Atenção, $P_{98}$ para Alerta e $P_{99.5}$ para Inundação).Calibração de Contingência e Ensembles: Aplicação de Stacking Ensemble ou ajuste fino do limiar de probabilidade visando a maximização do Critical Success Index (CSI) e do $F_1\text{-Score}$ sobre os eventos confirmados pela Defesa Civil.Comunicação Transparente de Incertezas e LimitaçõesA operacionalização de modelos de inteligência artificial em órgãos de Defesa Civil requer a comunicação explícita das incertezas associadas:Incerteza das Forçantes: A previsão em $D+1$ apoia-se em dados observados no dia $D$. Caso sejam integradas previsões numéricas quantitativas de precipitação (QPF), as incertezas meteorológicas devem ser propagadas via conjuntos (ensembles) probabilísticos.Incerteza do Alvo Sintético: A utilização do GloFAS atua como uma aproximação em bacia não monitorada; desvios hidrodinâmicos do modelo LISFLOOD podem introduzir defasagens temporais nos hidrogramas de cheia.Apresentação Probabilística: Alertas operacionais não devem ser comunicados de forma determinística binária ("Sim/Não"), mas acompanhados da probabilidade calibrada de superação dos limiares de risco e de intervalos de confiança empíricos ($IC_{90\%}$).Consensos, Divergências e Lacunas Científicas na LiteraturaA revisão sistemática da literatura hidroinformática revela consensos e divergências metodológicas fundamentais:Consensos:Modelos baseados em árvores (Gradient Boosting e Random Forest) superam redes neurais profundas em bases de dados tabulares hidrológicas curtas e médias ($N < 50\text{k}$).Métricas baseadas unicamente em acurácia ou ROC-AUC são inadequadas para eventos hidrológicos raros; a avaliação deve ancorar-se no CSI, PR-AUC e $F_1\text{-Score}$.A incorporação de preditores de umidade antecedente ($API$) e memória hidrológica de 7 a 30 dias é indispensável para a reprodução da dinâmica de saturação da bacia.Divergências:Técnicas de Balanceamento: Alguns autores defendem o uso de sobreamostragem sintética (SMOTE), enquanto a maioria da literatura recente em séries temporais aponta para o uso de penalização sensível ao custo (cost-sensitive learning) ou formulação contínua em dois estágios para evitar a perda de correlação serial.Uso Direto de Reanálises: Divergências sobre a transferibilidade direta de magnitudes de vazão do GloFAS versus a necessidade estrita de correção de quantis e calibração com modelos conceituais locais.Lacunas Científicas e Oportunidades de Contribuição do Projeto:Transferibilidade Operacional do GloFAS em Escala Municipal no Brasil: Validação da eficácia de limiares baseados em reanálises globais para proteção civil em bacias urbanas de médio porte na América do Sul.Validação Orientada por Registros Qualitativos de Defesa Civil: Desenvolvimento de metodologia formal para calibração de modelos de ML em bacias desprovidas de curvas-chave hidrométricas locais, apoiando-se em históricos de desastres da Defesa Civil.Modelagem do Efeito de Remanso em Confluências Urbanizadas: Quantificação, por meio de explicabilidade de modelos de aprendizado de máquina (TreeSHAP), da contribuição relativa de tributários torrenciais (Ribeirão Arrudas) no amortecimento e transbordamento da calha principal do Rio das Velhas em Sabará.
+
+Onde:
+- $\alpha$ = 0,88 a 0,92 (fator de decaimento)
+- $k$ = 30 dias (janela de memória)
+
+### 2.3 Variáveis Meteorológicas (INMET)
+
+| Variável | Mecanismo Físico |
+|----------|------------------|
+| **Pressão e ΔPress(24h)** | Aproximação de frentes e ZCAS |
+| **Umidade Relativa / VPD** | Controle de evapotranspiração |
+| **Temperatura** | Evapotranspiração potencial |
+| **Vento** | Movimentação de massas de ar |
+
+### 2.4 Estrutura de Lags
+
+Incluir defasagens t, t-1, t-2 para:
+- Todas as variáveis meteorológicas
+- Série de vazão GloFAS
+
+### 2.5 Normalização
+
+| Modelo | Normalização |
+|--------|--------------|
+| **Random Forest, XGBoost** | Não necessária |
+| **SVM, Regressão Logística, MLP** | **Obrigatória** (RobustScaler ou Z-Score) |
+
+---
+
+## 3. Fontes de Dados e Reanálises
+
+### 3.1 GloFAS como Alvo Hidrológico
+
+O GloFAS (Global Flood Awareness System) do ECMWF é amplamente utilizado para regiões sem dados fluviométricos, com KGE > 0 em 80% das bacias analisadas globalmente.
+
+**Limitações:**
+- Resolução espacial ~5-10 km (atenua picos de cheia súbitos)
+- Viés volumétrico sistemático em terrenos tropicais
+
+**Contorno:** Usar distribuição de quantis (Quantile Mapping) em vez de valores absolutos.
+
+### 3.2 Por que Usar Medições Locais (ANA) em vez de Reanálise?
+
+Produtos de reanálise (ERA5, CHIRPS) frequentemente **subestimam intensidades máximas** de chuva diária em bacias de cabeceira com relevo movimentado.
+
+A metodologia com pluviômetro local ANA (1943006) preserva a assinatura física de tempestades intensas.
+
+### 3.3 Justificativa para Estação INMET a 17 km
+
+A distância de ~17 km entre a estação INMET e Sabará é justificável porque:
+
+1. **Escala dos eventos:** Cheias em Sabará decorrem de ZCAS e frentes semi-estacionárias (escala de centenas de km)
+2. **Integração multiescalar:** INMET representa termodinâmica regional; ANA ancora heterogeneidade pluviométrica local
+
+---
+
+## 4. Modelos e Algoritmos
+
+### 4.1 Árvores vs Deep Learning
+
+**Consenso na literatura:** Modelos baseados em árvores (XGBoost, Random Forest) **superam redes neurais profundas** em dados tabulares com < 50.000 amostras.
+
+**Razões (Grinsztajn et al., NeurIPS 2022):**
+- Árvores capturam funções não-lineares em degrau (limiares hidrológicos)
+- Redes neurais impõem suavidade, achatando picos extremos
+- LSTM/GRU sofrem com carência de dados para generalização de cauda
+
+### 4.2 Comparativo de Algoritmos
+
+| Algoritmo | Tratamento Desbalanc. | Vantagens | Limitações |
+|-----------|----------------------|-----------|------------|
+| **XGBoost** | Excelente | Alta generalização, regularização L1/L2 | Requer ajuste fino |
+| **Random Forest** | Alta | Reduz variância, imune a overfitting | Não extrapola fora da faixa |
+| **SVM (RBF)** | Moderada | Mapeamento não-linear eficiente | Custo O(N²), sensível a escala |
+| **Regressão Logística** | Baixa | Transparência total | Incapaz de modelar não-linearidades |
+| **LSTM/GRU** | Baixa (N<50k) | Dependências temporais longas | Instável em séries curtas |
+
+### 4.3 Hiperparâmetros Críticos
+
+**XGBoost:**
+- `max_depth`: 3-6
+- `learning_rate`: 0,01-0,05
+- `scale_pos_weight`: N_neg/N_pos
+- `subsample`, `colsample_bytree`: 0,7-0,9
+
+**Random Forest:**
+- `n_estimators`: 300-1000
+- `min_samples_leaf`: 5-20
+- `max_features`: sqrt ou log2
+
+### 4.4 Ensemble (Stacking)
+
+**Arquitetura recomendada:**
+- **Nível 0:** XGBoost, Random Forest, SVM → probabilidades
+- **Nível 1:** Regressão Logística regularizada → ponderação final
+
+---
+
+## 5. Contexto Regional: Bacia do Alto Rio das Velhas
+
+### 5.1 Características
+
+- Relevo acidentado do Quadrilátero Ferrífero
+- Cabeceiras em Ouro Preto, passando por Itabirito, Rio Acima, Raposos, Sabará, Santa Luzia
+- Sabará: ponto de estrangulamento vulnerável
+
+### 5.2 Eventos Históricos
+
+| Evento | Forçante | Impacto |
+|--------|----------|---------|
+| **Jan 1997** | ZCAS persistente | Enchente generalizada |
+| **Jan 2020** | ZCAS + convecção extrema | Desabrigados em Sabará e Raposos |
+| **Jan 2022** | ZCAS (15 dias contínuos) | Vazão pico 530 m³/s, calamidade regional |
+| **Dez 2023** | Frentes sucessivas | Alagamentos e deslizamentos |
+| **Jan 2024** | Convecção | Alertas preventivos acionados |
+
+### 5.3 Efeito de Remanso (Ribeirão Arrudas)
+
+O Ribeirão Arrudas (bacia 206 km², quase totalmente urbanizada) deságua no Rio das Velhas próximo a Sabará.
+
+Em chuvas intensas na RMBH, quando o Rio das Velhas está alto, surge **barramento hidráulico** que eleva níveis a montante e causa transbordamento antecipado em Sabará.
+
+→ Por isso é vital usar dados INMET de BH: antecipar o deflúvio do Arrudas.
+
+---
+
+## 6. Não-Estacionaridade e Urbanização
+
+### 6.1 Por que NÃO Usar Dados Antigos (1939-1965)?
+
+Nas últimas 6 décadas, a bacia sofreu transformações profundas:
+
+- Impermeabilização: de < 10% para > 70% em sub-bacias metropolitanas
+- Redução de tempo de concentração
+- Alteração de batimetria por assoreamento
+
+> **A função chuva-vazão de 1950 não é equivalente à de 2026.** Um mesmo volume de 80 mm/dia gerava elevação moderada nos anos 1950, mas produz vazões de pico muito mais altas hoje.
+
+**Recomendação:**
+- Série antiga: apenas para análise climatológica de período de retorno
+- Treinamento ML: **usar base contemporânea (2006-2026)**
+
+### 6.2 Inundação Fluvial vs Alagamento Urbano
+
+| Tipo | Descrição | Capturado pelo Modelo? |
+|------|-----------|------------------------|
+| **Inundação Fluvial** | Transbordamento do rio por chuvas na bacia (12-48h de elevação) | **SIM** |
+| **Alagamento Urbano** | Insuficiência de microdrenagem sob tempestades sub-diárias | **NÃO** |
+
+> A validação deve ser filtrada para contemplar **exclusivamente eventos de transbordamento fluvial**.
+
+---
+
+## 7. Pipeline Operacional Proposto
+
+```
+[Dados Diários ANA 1943006 + INMET A521]
+           │
+           ▼
+[Engenharia: Acumulados, API, Lags, ΔPressão]
+           │
+           ▼
+[Série Contínua GloFAS (2006-2025)]
+           │
+           ▼
+[Modelagem Contínua de Vazão D+1 (XGBoost/RF)]
+           │
+           ▼
+[Mapeamento de Percentis: P90, P95, P99]
+           │
+           ▼
+[Emissão de Alertas Categóricos]
+```
+
+---
+
+## 8. Comunicação de Incertezas
+
+Alertas operacionais **não devem ser binários** ("Sim/Não"), mas acompanhados de:
+- Probabilidade calibrada de superação dos limiares
+- Intervalos de confiança empíricos (IC 90%)
+
+---
+
+## 9. Consensos e Lacunas na Literatura
+
+### Consensos
+
+- Modelos de árvores > Deep Learning para N < 50k amostras
+- Acurácia/ROC-AUC inadequadas para eventos raros
+- Índice API e memória de 7-30 dias são indispensáveis
+
+### Divergências
+
+- SMOTE vs Cost-Sensitive Learning em séries temporais
+- Uso direto de GloFAS vs necessidade de calibração local
+
+### Lacunas (Oportunidades de Contribuição)
+
+1. **Transferibilidade do GloFAS em escala municipal no Brasil**
+2. **Metodologia de calibração com registros qualitativos de Defesa Civil**
+3. **Quantificação do efeito de remanso em confluências urbanizadas**
+
+---
+
+## Referências Metodológicas
+
+- Grinsztajn, L., Oyallon, E., & Varoquaux, G. (2022). Why do tree-based models still outperform deep learning on typical tabular data? NeurIPS.
+- ECMWF/JRC. GloFAS-ERA5 Reanalysis v4 Documentation.
+- Literatura hidrológica brasileira sobre SMAP, CEMADEN, SACE/CPRM.
