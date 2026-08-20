@@ -38,6 +38,17 @@ def processar_chuvas(chuvas_raw):
     daily_chuvas = daily_chuvas.sort_values("data").reset_index(drop=True)
     daily_chuvas["data"] = pd.to_datetime(daily_chuvas["data"])
     daily_chuvas = daily_chuvas[(daily_chuvas["data"] >= "1997-01-01") & (daily_chuvas["data"] <= "2026-04-30")].reset_index(drop=True)
+    
+    # Preencher gap 02-08/nov/2024 com dados da estação CGH Marzagão (1943146)
+    # Fonte: ANA - Estação 1943146, Sabará-MG, lat -19.8997, lon -43.8742
+    gap = pd.DataFrame({
+        "data": pd.to_datetime(["2024-11-02", "2024-11-03", "2024-11-04", "2024-11-05", "2024-11-06", "2024-11-07", "2024-11-08"]),
+        "chuva_fill": [0.0, 0.0, 2.8, 37.8, 0.0, 1.6, 1.6]
+    })
+    daily_chuvas = daily_chuvas.merge(gap, on="data", how="left")
+    daily_chuvas["chuva_mm"] = daily_chuvas["chuva_mm"].fillna(daily_chuvas["chuva_fill"])
+    daily_chuvas = daily_chuvas.drop(columns=["chuva_fill"])
+    
     return daily_chuvas
 
 
@@ -53,11 +64,10 @@ def processar_inmet(inmet_raw):
         "TEMPERATURA MEDIA COMPENSADA, DIARIA(Â°C)": "temp_media",
         "TEMPERATURA MAXIMA, DIARIA(Â°C)": "temp_max",
         "TEMPERATURA MINIMA, DIARIA(Â°C)": "temp_min",
-        "UMIDADE RELATIVA DO AR, MEDIA DIARIA(%)": "umidade_media",
-        "VENTO, VELOCIDADE MEDIA DIARIA(m/s)": "vento_medio"
+        "UMIDADE RELATIVA DO AR, MEDIA DIARIA(%)": "umidade_media"
     })
     inmet["data"] = pd.to_datetime(inmet["data"])
-    inmet = inmet[["data", "temp_media", "temp_max", "temp_min", "umidade_media", "vento_medio"]]
+    inmet = inmet[["data", "temp_media", "temp_max", "temp_min", "umidade_media"]]
     return inmet
 
 

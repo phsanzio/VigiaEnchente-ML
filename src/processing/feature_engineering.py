@@ -14,18 +14,18 @@ def calcular_acumulados(df):
     return df
 
 
-def calcular_api(df, k_dias=30, alpha=0.90, nome_coluna="api_30d"):
-    pesos = np.array([alpha ** i for i in range(1, k_dias + 1)])
-    api_valores = np.zeros(len(df))
+def calcular_api_recursivo(chuva, alpha):
+    api = np.zeros(len(chuva))
+    for t in range(1, len(chuva)):
+        c = chuva[t-1] if not np.isnan(chuva[t-1]) else 0
+        api[t] = alpha * (api[t-1] + c)
+    return api
+
+
+def calcular_apis(df):
     chuva = df["chuva_mm"].to_numpy()
-    
-    for t in range(1, len(df)):
-        inicio = max(0, t - k_dias)
-        chuvas_passadas = chuva[inicio:t][::-1]
-        w = pesos[:len(chuvas_passadas)]
-        api_valores[t] = np.sum(chuvas_passadas * w)
-    
-    df[nome_coluna] = api_valores
+    df["api_7d"] = calcular_api_recursivo(chuva, alpha=0.85)
+    df["api_30d"] = calcular_api_recursivo(chuva, alpha=0.90)
     return df
 
 
@@ -44,8 +44,7 @@ def criar_target(df):
 
 def criar_features(df):
     df = calcular_acumulados(df)
-    df = calcular_api(df, k_dias=7, alpha=0.85, nome_coluna="api_7d")
-    df = calcular_api(df, k_dias=30, alpha=0.90, nome_coluna="api_30d")
+    df = calcular_apis(df)
     df = calcular_lags(df)
     df = criar_target(df)
     return df
@@ -56,11 +55,8 @@ if __name__ == "__main__":
     df["data"] = pd.to_datetime(df["data"])
     
     df = criar_features(df)
-    
     df = df.dropna().reset_index(drop=True)
     
-    df.to_csv(PROCESSED / "features_database.csv", index=False)
+    df = df.round(2)
+    df.to_csv(PROCESSED / "final_database.csv", index=False)
     
-    print(f"Registros: {len(df)}")
-    print(f"Colunas: {list(df.columns)}")
-    print(df.head(10))
