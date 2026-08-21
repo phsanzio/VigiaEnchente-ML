@@ -1,4 +1,4 @@
-data,chuva_mm,vazao,temp_media,temp_max,temp_min,umidade_media,chuva_3d,chuva_7d,chuva_14d,chuva_30d,api_7d,api_30d,vazao_lag1,vazao_lag2,chuva_lag1,chuva_lag2,target
+data,chuva_mm,vazao,temp_media,temp_max,temp_min,umidade_media,chuva_3d,chuva_7d,chuva_14d,chuva_30d,api_7d,api_30d,vazao_ontem,vazao_anteontem,chuva_ontem,chuva_anteontem,target
 1997-01-03,58.1,17.97,19.3,20.1,18.2,94.3,79.0,79.0,79.0,79.0,17.76,18.81,12.52,11.25,20.9,0.0,28.85
 1997-01-04,20.4,28.85,20.0,21.3,18.7,93.3,99.4,99.4,99.4,99.4,64.49,69.22,17.97,12.52,58.1,20.9,33.67
 1997-01-05,10.2,33.67,21.1,25.0,19.2,92.3,88.7,109.6,109.6,109.6,72.15,80.66,28.85,17.97,20.4,58.1,32.81

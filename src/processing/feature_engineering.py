@@ -30,10 +30,10 @@ def calcular_apis(df):
 
 
 def calcular_lags(df):
-    df["vazao_lag1"] = df["vazao"].shift(1)
-    df["vazao_lag2"] = df["vazao"].shift(2)
-    df["chuva_lag1"] = df["chuva_mm"].shift(1)
-    df["chuva_lag2"] = df["chuva_mm"].shift(2)
+    df["vazao_ontem"] = df["vazao"].shift(1)
+    df["vazao_anteontem"] = df["vazao"].shift(2)
+    df["chuva_ontem"] = df["chuva_mm"].shift(1)
+    df["chuva_anteontem"] = df["chuva_mm"].shift(2)
     return df
 
 
