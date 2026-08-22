@@ -7,7 +7,7 @@ def main():
     process_database()
     create_features()
     train_all_models()
-    #run_tuning()
+    run_tuning()
 
 
 if __name__ == "__main__":

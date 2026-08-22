@@ -32,21 +32,21 @@ def split_database(df):
     return X_train, X_val, X_test, y_train, y_val, y_test
 
 def train_rf(X_train, y_train, X_val, y_val):
-    rf = RandomForestRegressor(max_depth=10, min_samples_split=2, n_estimators=200, random_state=42)
+    rf = RandomForestRegressor(n_estimators=100, random_state=42)
     rf.fit(X_train, y_train)
     
     y_pred_val = rf.predict(X_val)
-    results_val = {'model': 'RandomForest (Val)', 'metrics': calculate_metrics(y_val, y_pred_val)}
+    results_val = {'model': 'RandomForest (Validation)', 'metrics': calculate_metrics(y_val, y_pred_val)}
     print(results_val)
     
     joblib.dump(rf, MODELS / "random_forest.joblib")
 
 def train_xgb(X_train, y_train, X_val, y_val):
-    xgb = XGBRegressor(learning_rate=0.2, max_depth=5, n_estimators=100, random_state=42)
+    xgb = XGBRegressor(n_estimators=100, random_state=42)
     xgb.fit(X_train, y_train)
     
     y_pred_val = xgb.predict(X_val)
-    results_val = {'model': 'XGBoost (Val)', 'metrics': calculate_metrics(y_val, y_pred_val)}
+    results_val = {'model': 'XGBoost (Validation)', 'metrics': calculate_metrics(y_val, y_pred_val)}
     print(results_val)
     
     joblib.dump(xgb, MODELS / "xgboost.joblib")
@@ -58,20 +58,20 @@ def train_ridge(X_train, y_train, X_val, y_val):
     X_val_scaled = scaler.transform(X_val)
     ridge.fit(X_train_scaled, y_train)
     y_pred_ridge = ridge.predict(X_val_scaled)
-    results_ridge = {'model': 'Ridge', 'metrics': calculate_metrics(y_val, y_pred_ridge)}
-    #print(results_ridge)
+    results_ridge = {'model': 'Ridge (Validation)', 'metrics': calculate_metrics(y_val, y_pred_ridge)}
+    print(results_ridge)
     joblib.dump(ridge, MODELS / "ridge.joblib")
     joblib.dump(scaler, MODELS / "ridge_scaler.joblib")
 
 def baseline_climatologica(y_train, y_val):
     media_treino = y_train.mean()
     y_pred = np.full(len(y_val), media_treino)
-    results_baseline = {'model': 'Baseline (Média Climatológica)', 'metrics': calculate_metrics(y_val, y_pred)}
-    #print(results_baseline)
+    results_baseline = {'model': 'Baseline (Validation)', 'metrics': calculate_metrics(y_val, y_pred)}
+    print(results_baseline)
 
 def train_all_models():
     final_database = pd.read_csv(PROCESSED / "final_database.csv", parse_dates=['data'])
-    X_train, X_val, X_test, y_train, y_val, y_test = split_database(final_database)
+    X_train, X_val, y_train, y_val = split_database(final_database)
     train_rf(X_train, y_train, X_val, y_val)
     train_xgb(X_train, y_train, X_val, y_val)
     train_ridge(X_train, y_train, X_val, y_val)

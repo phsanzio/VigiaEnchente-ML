@@ -5,8 +5,7 @@ from sklearn.model_selection import GridSearchCV, TimeSeriesSplit
 from sklearn.metrics import make_scorer
 from xgboost import XGBRegressor
 from metrics.metrics import calculate_kge
-import warnings
-warnings.filterwarnings('ignore')
+
 
 ROOT = Path(__file__).parent.parent.parent
 PROCESSED = ROOT / "data" / "processed"
@@ -18,19 +17,6 @@ FEATURE_COLS = [
     'chuva_ontem', 'chuva_anteontem', 'chuva_3d_atras', 'chuva_4d_atras',
     'sin_doy', 'cos_doy', 'vpd'
 ]
-
-
-def print_folds(X, tscv, dates):
-    print("\nDivisão dos Folds (TimeSeriesSplit 5 folds):")
-    print("-" * 60)
-    for i, (train_idx, val_idx) in enumerate(tscv.split(X)):
-        train_start = dates.iloc[train_idx[0]]
-        train_end = dates.iloc[train_idx[-1]]
-        val_start = dates.iloc[val_idx[0]]
-        val_end = dates.iloc[val_idx[-1]]
-        print(f"Fold {i+1}: Treina [{train_start.date()} a {train_end.date()}] ({len(train_idx)} amostras)")
-        print(f"        Valida [{val_start.date()} a {val_end.date()}] ({len(val_idx)} amostras)")
-    print("-" * 60 + "\n")
 
 
 def tune_rf(X, y, tscv):
@@ -49,8 +35,8 @@ def tune_rf(X, y, tscv):
         n_jobs=-1
     )
     grid.fit(X, y)
-    print(f"Melhor KGE (CV): {grid.best_score_:.4f}")
-    print(f"Params: {grid.best_params_}")
+    print(f"Best KGE: {grid.best_score_:.4f}")
+    print(f"Best RF Params: {grid.best_params_}")
     return grid.best_params_, grid.best_score_
 
 
@@ -70,8 +56,8 @@ def tune_xgb(X, y, tscv):
         n_jobs=-1
     )
     grid.fit(X, y)
-    print(f"Melhor KGE (CV): {grid.best_score_:.4f}")
-    print(f"Params: {grid.best_params_}")
+    print(f"Best KGE: {grid.best_score_:.4f}")
+    print(f"Best XGB Params: {grid.best_params_}")
     return grid.best_params_, grid.best_score_
 
 
@@ -84,11 +70,10 @@ def run_tuning():
     print(f"Dados de treino: {len(X)} amostras (1997-2016)")
     print(f"Features: {len(FEATURE_COLS)}")
     
-    tscv = TimeSeriesSplit(n_splits=5)
-    print_folds(X, tscv, train['data'])
+    time_series = TimeSeriesSplit(n_splits=5)
     
-    rf_params, rf_score = tune_rf(X, y, tscv)
-    xgb_params, xgb_score = tune_xgb(X, y, tscv)
+    rf_params, rf_score = tune_rf(X, y, time_series)
+    xgb_params, xgb_score = tune_xgb(X, y, time_series)
     
     print("\n" + "="*50)
     print("RESULTADO FINAL DO TUNING")
@@ -97,3 +82,6 @@ def run_tuning():
     print(f"XGB: KGE={xgb_score:.4f} | {xgb_params}")
     
     return rf_params, xgb_params
+
+if __name__ == "__main__":
+    run_tuning()
