@@ -1,0 +1,167 @@
+\documentclass[12pt]{article}
+
+\usepackage{sbc-template}
+
+\usepackage{graphicx,url}
+
+\usepackage[utf8]{inputenc}
+
+\usepackage[brazil]{babel}
+
+\sloppy
+
+\title{Aplicação de aprendizado de máquina para previsão de risco de enchentes: um estudo de caso no município de Sabará/MG}
+
+\author{Pedro H. S. F. Xavier\inst{1}, Carlos A. Silva\inst{1}, Carlos A. S. Junior\inst{1}}
+
+\address{Departamento de Informática -- Instituto Federal de Minas Gerais (IFMG)\\
+  CEP 34590-390 - Sabará - MG - Brasil}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+  This work aims to develop and evaluate a machine learning model for flood risk prediction in the municipality of Sabará (MG), with a 24-hour prediction horizon: it uses information available up to day D to predict flood risk on day D+1. The models will be trained using official rainfall data complemented by simulated hydrological data. The target variable is defined based on the official criteria of the municipal contingency plan (PLANCON). Random Forest, XGBoost, SVM and Logistic Regression will be evaluated and compared against a rule-based baseline derived from the PLANCON criteria. Despite the challenges in obtaining hydrological data in the Brazilian context, the proposed approach is expected to demonstrate the feasibility of applying machine learning as a support tool for disaster risk management.
+\end{abstract}
+
+\begin{resumo}
+  O presente trabalho tem como objetivo treinar e avaliar modelos de aprendizado de máquina para estimar a vazão usando dados pluviométricos no município de Sabará (MG), com horizonte de previsão de 24 horas: utiliza dados disponíveis até o dia D para prever a vazão no dia D+1. Para o treinamento, serão utilizados dados oficiais, complementados por dados hidrológicos simulados para criar a nossa variável alvo. Serão testados os modelos Random Forest, XGBoost e Regressão Linear, comparados contra um baseline. Apesar dos desafios na obtenção dos dados hidrológicos no contexto brasileiro, os modelos demonstraram a viabilidade da aplicação de aprendizado de máquina como ferramenta de apoio à gestão de riscos de desastres.
+\end{resumo}
+
+\section{Introdução}
+
+A população do município de Sabará vem sofrendo há anos com enchentes que causam grandes consequências, desde a perda de bens pessoais e moradia até a perda de vidas. Esses fenômenos ocorrem principalmente pela cheia do Rio das Velhas, rio que atravessa a cidade. Os métodos e modelos tradicionais de previsão não são escaláveis e dependem da interpretação individual de cada variável que possa causar impacto no nível do rio, além da experiência dos especialistas para identificar correlações entre elas e tentar alertar a população a tempo. Fora o fato de que a principal variavel para podermos ter uma previsao de encgentes, a vazao que era medida por uma estacao fluviometrica, foi desativada e entao há a carencia de termos dados de vazoes baseados em alternativas locais, como o presente trabalho propoe.
+
+Nesse contexto, os modelos de inteligência artificial têm despontado como alternativas promissoras para lidar com dados não lineares, como os dados hidrológicos, conseguindo identificar padrões sem a necessidade de compreender intimamente cada uma das variáveis envolvidas. Diante da magnitude dos danos causados e do avanço das técnicas de aprendizado de máquina, o presente trabalho pretende avaliar a eficácia desses métodos utilizando dados oficiais obtidos pelos sites da ANA e do INMET, além de métricas e eventos registrados pela Defesa Civil de Sabará como parâmetro para o modelo no entendimento dos padrões que antecedem os desastres. O modelo proposto opera com horizonte de previsão de 24 horas, utilizando dados disponíveis até o dia D para a vazão dia D+1, permitindo tempo hábil para ações preventivas.
+
+Dado o cenário brasileiro de escassez de dados hidrológicos, foi necessário complementar a base disponível. Para tal, usamos dados de vazao do Glofas, dados esses que viraram nossa variavel alvo, esses dados não sao tao feis quanto seriam caso ainda existia a medicao in loco que havia na estacao que foi desativada, no entanto usando eles como ponto de partida para treinar nosso modelo, conseguimos estimar uma vazao mais proximo do que eles podem representar por estar integrando dados regionais da cidade na modelagem da base de dados. Durante o treinamento, .... Além disso, foram comparados diferentes modelos de aprendizado de máquina em busca da melhor alternativa, refinando hiperparâmetros dos modelos que obtiveram as melhores métricas no conjunto de validacao para encontrar a combinação ideal entre modelo, parâmetros, demonstrando que aprendizado de máquina tem potencial significativo para servir como ferramenta de apoio na prevenção de desastres.
+
+As contribuições deste trabalho são: construção de uma base de dados integrando registros oficiais de 1997 a 2026 com fontes complementares; (ii) avaliação comparativa de 3 modelos de aprendizado de máquina para estimar a vazão no horizonte de 24 horas sem depender de dados de vazão em tempo real depois de treinado; (iii) análise da melhor combinação entra parametros e modelo; e (iv) validação dos resultados contra eventos reais confirmados pela Defesa Civil de Sabará (a pensar se vai ter ainda).
+
+\section{Trabalhos Relacionados}
+
+\label{sec:trabalhosrelacionados}
+
+No que diz respeito à previsão de enchentes, o uso de inteligência artificial tem sido amplamente explorado. Entre as abordagens mais utilizadas, destacam-se os modelos de aprendizado de máquina \cite{ramos2025, parreira2025} e as redes neurais artificiais \cite{sperb1999, alberton2021}. Esses algoritmos são capazes de lidar com a não linearidade dos dados hidrológicos, conseguindo extrair padrões mesmo diante das variações abruptas características desses dados. Habilidade essa que, como demonstrado em \cite{ramos2025}, os faz superar modelos estatísticos tradicionais como o ARIMA.
+
+Pela importância das hidrelétricas para o país, alguns estudos correlacionam dados pluviométricos com aumentos no consumo energético \cite{ramos2025}, o que demonstra como algoritmos capazes de prever variáveis hidrológicas são de extrema importância para as mais diversas áreas da economia e do conhecimento. No presente trabalho, o enfoque está trinar um modelo que possa ajudar a prevenir principalmente perdas humanas, mas também perdas financeiras advindas dos frequentes alagamentos e deslizamentos que acometem o município de Sabará.
+
+Sperb et al. \cite{sperb1999} propõem um sistema baseado em redes neurais capaz de transformar precipitação em vazão, utilizando dados de chuva das estações distribuídas ao longo da bacia de contribuição até o ponto de interesse. Nesse viés, a metodologia principal do presente trabalho está em transformar a vazão do rio em indicativos reais de enchentes, mas sem descartar a transformação precipitação-vazão para preencher lacunas nos dados disponíveis. As redes neurais têm funcionamento similar aos modelos de aprendizado de máquina: funcionam como uma espécie de caixa-preta que não precisa identificar ou quantificar individualmente cada fator, pois os incorpora implicitamente durante o treinamento. O PREVENT obteve taxa de acerto de 93\% nas previsões com uma modelagem relativamente simples e utilizando dados da década de 1990, o que sugere que com os avanços tecnológicos atuais, resultados ainda mais expressivos podem ser alcançados.
+
+Parreira e Sanches \cite{parreira2025} propuseram um sistema ainda mais abrangente de prevenção e mitigação de desastres naturais utilizando ML, cobrindo as fases de pré-desastre, desastre e pós-desastre. No estudo, foram testados diferentes algoritmos de ensemble learning, sendo o XGBoost o que apresentou melhor desempenho (R² de 0,974 e MAE de 0,337). O modelo identificou que as variáveis mais relevantes para a predição foram precipitação, nível do rio e umidade relativa, o que reforça a escolha dessas variáveis no presente trabalho. Ademais, a solução proposta visa focar na assertividade da predição como primeira etapa, para que, uma vez validado, o modelo possa ser avaliado pela Defesa Civil, que poderá orientar etapas subsequentes seguindo um modelo de colaboração entre instituição de ensino e poder público.
+
+Trazendo uma proposta mais focada na estatística, Mendes, Christo e Costa \cite{mendes2024} utilizaram o SARIMA para desenvolver um modelo de previsão para o Rio Doce em Governador Valadares (MG), obtendo MAPE de 0,64\% e RMSE de 0,0224. Um aspecto importante desse estudo é a estratégia de validação: o modelo foi testado com os dados dos 10 dias mais críticos ao redor da enchente de janeiro de 2022, terceira maior da história do município, onde as previsões eram comparadas aos dados reais e atualizadas sequencialmente. A presença de trabalhos que utilizam modelos estatísticos tradicionais é relevante por servir como base de comparação para avaliar a eficácia dos métodos baseados em IA, que não dependem de pressupostos como linearidade e estacionariedade.
+
+Alberton et al. \cite{alberton2021} avaliaram a aplicação de dois modelos de redes neurais (LSTM e MLP) para prever enchentes no Rio Itajaí-Açu em Blumenau (SC), alcançando R² de 0,997 com o modelo LSTM para previsões de 6 horas de antecedência. Os autores destacam que, anteriormente, as predições dependiam de especialistas que utilizavam métodos empíricos ajustados com base em experiências passadas, evidenciando a dependência do conhecimento individual e a dificuldade na realização de previsões em tempo real. É justamente essa limitação que abordagens baseadas em IA buscam solucionar. Para validação, selecionaram 7 eventos hidrológicos de alerta reais, priorizando o evento com maior completude e consistência de dados.
+
+A quantidade e qualidade dos dados hidrológicos é um problema constante no contexto brasileiro. Em \cite{ramos2025} recorreu-se a técnicas de preenchimento, em \cite{sperb1999} optou-se pela remoção de dados inconsistentes, em \cite{mendes2024} utilizaram-se apenas 4 anos de registros devido à ausência de dados anteriores na estação estudada, e em \cite{parreira2025} foi necessário recorrer a portais de notícias para identificar eventos de enchentes. Nesse quesito, o presente trabalho conta com a colaboração da Defesa Civil de Sabará, que forneceu eventos históricos oficialmente registrados e os critérios objetivos de ativação do plano de contingência, além de dados pluviométricos obtidos junto à ANA abrangendo todo o período de interesse. Ainda assim, dada a incompletude dos dados fluviométricos em parte do período, foram exploradas fontes complementares e técnicas de estimativa para suprir essas lacunas.
+
+A abordagem de validação em cenários críticos \cite{alberton2021, mendes2024}, bem como a prática de ajuste de hiperparâmetros \cite{alberton2021, parreira2025}, são referências metodológicas para o presente trabalho, que também avalia seus modelos frente aos eventos de enchentes confirmados pela Defesa Civil, ajustando parâmetros em busca do melhor desempenho.
+
+\section{Metodologia}
+
+Este trabalho caracteriza-se como uma pesquisa aplicada e experimental, com abordagem de estudo de caso. A metodologia a seguir descreve o pipeline projetado para o desenvolvimento do modelo, cuja execução será realizada na etapa de TCC II. O modelo terá como saída uma classificação binária, indicando se determinado dia apresenta ou não risco de enchente conforme os critérios definidos pelo PLANCON da Defesa Civil de Sabará. O horizonte de previsão adotado é de 24 horas, para tal o modelo utilizará informações pluviométricas e hidrológicas disponíveis até o dia D para prever a ocorrência de risco de enchente no dia D+1. Essa definição é fundamental para garantir que o modelo seja genuinamente preditivo e para delimitar quais variáveis podem ser utilizadas sem incorrer em vazamento de informação.
+
+\subsection{Coleta de Dados}
+
+Para o treinamento do modelo foi montada uma base de dados combinando três categorias de fontes:
+
+\begin{itemize}
+    \item \textbf{Dados medidos (ANA/HidroWeb):} dados oficiais de precipitação diária da estação 1943006 \cite{ana2025}, com registros disponíveis desde 1941. Para o presente trabalho, foram utilizados os dados a partir de 1997;
+
+    \item \textbf{Descarga simulada (GloFAS):} estimativas de vazão do rio obtidas através da API Open-Meteo, que utiliza o GloFAS \cite{harrigan2023} para fornecer dados de descarga fluvial com resolução espacial de aproximadamente 5 km, utilizados no período de 1997 a 2025;
+
+    \item \textbf{Variáveis meteorológicas de reanálise (Open-Meteo/ERA5):} dados de temperatura, umidade relativa e velocidade do vento obtidos da reanálise ERA5 via API Open-Meteo, que combina modelagem atmosférica com dados observacionais para produzir estimativas historicamente consistentes;
+
+    \item \textbf{Dados estimados (Modelo Precipitação-Vazão):} valores de vazão estimados a partir de um modelo de transformação precipitação-vazão treinado com os 26 anos de dados pareados disponíveis (1939-1965), oferecendo uma alternativa baseada exclusivamente em dados locais medidos in loco.
+\end{itemize}
+
+O período de 1997 a 2025 foi selecionado por apresentar cobertura conjunta de todas as fontes: precipitação oficial (ANA), descarga simulada (GloFAS) e variáveis meteorológicas de reanálise (ERA5). Esse recorte abrange todos os eventos de enchente confirmados pela Defesa Civil, além de fornecer volume de dados suficiente para o treinamento dos modelos. Os dados de vazão real (1939-1965) permanecem disponíveis para o experimento de transformação precipitação-vazão.
+
+\subsection{Definição da Variável-Alvo}
+
+A variável-alvo foi definida em conformidade com o PLANCON (Plano de Contingência) elaborado pela Defesa Civil de Sabará, que estabelece critérios objetivos para ativação do sistema de alerta: precipitação acumulada superior a 100mm em 72 horas e nível do Rio das Velhas acima de 2,0 metros na Régua da Ponte do Paciência. A entidade também forneceu eventos históricos de enchentes oficialmente registrados, complementados com registros obtidos por meio de levantamento em portais de notícias.
+
+É importante destacar que os critérios do PLANCON são utilizados exclusivamente para a construção da variável-alvo (rótulo de treinamento), e não como variáveis de entrada do modelo no mesmo período. Para evitar vazamento de informação, todas as features utilizadas referem-se a dados disponíveis até o dia D, enquanto o target (risco ou não de enchente) corresponde ao dia D+1. Dessa forma, o modelo não pode simplesmente reproduzir a regra operacional do PLANCON, sendo obrigado a aprender padrões preditivos nos dados antecedentes.
+
+Após avaliar as diferentes alternativas de preenchimento e complementação, será construída uma base de registros diários abrangendo o período com cobertura conjunta das fontes selecionadas, que após o pré-processamento será utilizada no treinamento dos modelos.
+
+\subsection{Pré-processamento}
+
+Os dados oficiais fornecidos em formato CSV vinham agrupados por mês, com uma coluna para cada dia (Chuva01 a Chuva31). Foi realizado o despivotamento dessa estrutura para obter uma linha por dia, formato adequado para o treinamento do modelo. Além disso, os dados eram fornecidos com um nível de consistência que variava de 1 (bruto) a 2 (consistido, com medição validada). Para dias em que havia registros em ambos os níveis, os dados de nível 1 foram descartados, priorizando os dados já validados.
+
+Conforme mencionado, foi necessário combinar dados de diferentes fontes e escalas. Todas as variáveis numéricas foram normalizadas para garantir compatibilidade entre as escalas, independentemente da origem dos dados. No caso específico dos dados simulados (GloFAS/Open-Meteo), as fontes foram cruzadas nos períodos em que ambas possuíam registros a fim de verificar a proximidade entre os valores simulados e os dados oficiais medidos in loco.
+
+\subsection{Feature Engineering}
+
+Com a base de dados pré-processada, procedeu-se à análise de inserção de features (variáveis derivadas) que pudessem contribuir para o desempenho do modelo. Todas as features são construídas exclusivamente a partir de dados disponíveis até o dia D, respeitando o horizonte de previsão de 24 horas. Foi avaliada a inclusão do acumulado de chuvas em diferentes janelas temporais (3, 7, 14 e 30 dias anteriores a D) a fim de identificar qual configuração produz as melhores previsões, dado que o acumulado é o principal indicador utilizado pela Defesa Civil no acionamento de alertas.
+
+Foram incluídas também variáveis de defasagem temporal (lag) representando a precipitação dos dias anteriores de forma individual, com o objetivo de fornecer ao modelo uma estimativa indireta do estado de saturação do solo nos dias que antecedem o evento. Na literatura hidrológica, esse conceito é denominado condições antecedentes de umidade (AMC - Antecedent Moisture Condition), e a precipitação acumulada dos dias anteriores é amplamente utilizada como proxy dessa variável quando não há sensores de umidade disponíveis. Berthet et al. \cite{berthet2009} demonstraram, ao comparar 178 bacias hidrográficas, que modelos que consideram continuamente o estado de umidade do solo apresentam desempenho superior na previsão de cheias em relação a modelos que analisam apenas o evento isolado. Complementarmente, Merz et al. \cite{merz2025} evidenciaram que a mesma precipitação extrema pode gerar enchentes de magnitudes drasticamente diferentes dependendo do estado prévio de saturação do solo, reforçando que a distribuição temporal da chuva nos dias anteriores é tão relevante quanto o acumulado total. Essa abordagem permite ao modelo distinguir cenários com o mesmo acumulado mas distribuições distintas: por exemplo, 100mm concentrados em um único dia produzem efeito diferente de 100mm distribuídos ao longo de três dias consecutivos sobre solo progressivamente saturado.
+
+Adicionalmente, foi avaliada a necessidade de incluir variáveis que indicassem sazonalidade, como o período chuvoso conhecido no município (novembro a março), e variáveis climáticas complementares como temperatura, umidade relativa e velocidade do vento, obtidas da API Open-Meteo referentes ao dia D.
+
+\subsection{Modelagem e Treinamento}
+
+O problema de previsão de enchentes foi abordado como classificação binária, onde o modelo prevê se o dia D+1 apresenta ou não risco de enchente, utilizando exclusivamente dados disponíveis até o dia D. Os critérios do PLANCON servem como referência para a construção dos rótulos de treinamento, mas o modelo deve aprender a antecipar esses cenários a partir de padrões nos dados antecedentes.
+
+Adicionalmente, utilizando os 26 anos em que estão disponíveis simultaneamente dados de precipitação e vazão real (1939-1965), foi treinado um modelo de transformação precipitação-vazão, de forma análoga ao proposto por Sperb et al. \cite{sperb1999}. Esse modelo permite estimar valores de vazão para o período em que apenas dados de precipitação estão disponíveis, oferecendo uma alternativa baseada exclusivamente em dados locais medidos in loco. A comparação entre os resultados obtidos com dados simulados (GloFAS) e com dados estimados localmente constitui um dos experimentos centrais deste trabalho.
+
+A divisão dos dados em conjuntos de treino e teste seguiu um critério temporal: todos os registros anteriores a 2020 foram utilizados para treinamento e os registros de 2020 a 2025 para teste. Essa abordagem, denominada split temporal, é obrigatória em problemas que envolvem séries temporais, uma vez que uma divisão aleatória permitiria ao modelo treinar com dados futuros e testar com dados passados, configurando vazamento de informação temporal (data leakage). Conforme documentado na literatura \cite{geron2017}, divisões aleatórias em séries temporais podem superestimar significativamente a acurácia do modelo em relação ao desempenho real.
+
+Foram selecionados quatro algoritmos de aprendizado de máquina, representando diferentes famílias de modelos. A Regressão Logística foi incluída como baseline estatístico, servindo de referência mínima para justificar a necessidade de abordagens mais complexas. O Random Forest, método de ensemble baseado em bagging que agrega múltiplas árvores de decisão, foi selecionado por sua robustez e capacidade de extrair a importância de cada variável, tendo apresentado bons resultados em \cite{ramos2025}. O XGBoost, método de ensemble baseado em boosting com mecanismos para evitar overfitting, foi incluído por ter demonstrado o melhor desempenho em \cite{parreira2025} para previsão de nível de rio. O SVM (Support Vector Machine), que busca a fronteira de decisão ótima entre classes utilizando funções de kernel, foi selecionado por representar uma família diferente de algoritmos (não baseada em árvores), conferindo diversidade à comparação e tendo demonstrado eficácia em \cite{ramos2025}.
+
+Adicionalmente, como baseline operacional, foi implementada uma regra simples baseada diretamente nos critérios do PLANCON: se a precipitação acumulada nos 3 dias anteriores (D-2, D-1, D) excede 100mm, classifica-se o dia D+1 como risco. Essa regra permite verificar se os modelos de aprendizado de máquina efetivamente superam uma heurística operacional simples, justificando a complexidade adicional.
+
+Para cada modelo, foram avaliadas diferentes configurações de hiperparâmetros em busca da combinação que maximiza o desempenho nas métricas definidas. Todo o desenvolvimento foi realizado em Python utilizando a biblioteca scikit-learn \cite{pedregosa2011}, e o código-fonte encontra-se disponível em repositório público no GitHub para garantir a reprodutibilidade do trabalho.
+
+\subsection{Avaliação dos Modelos}
+
+O desempenho dos modelos foi avaliado utilizando métricas complementares que permitem uma análise abrangente da capacidade preditiva, especialmente considerando o desbalanceamento esperado do dataset.
+
+Foram utilizadas as seguintes métricas: Acurácia (proporção de predições corretas sobre o total), Precisão (proporção de predições positivas que são de fato corretas), Recall (proporção de eventos reais que o modelo consegue detectar) e F1-Score (média harmônica entre Precisão e Recall, indicada como métrica principal por equilibrar ambas em cenários desbalanceados).
+
+No contexto de um sistema de previsão de enchentes, os tipos de erro possuem impactos práticos distintos e assimétricos. Um falso negativo ocorre quando o modelo não identifica um evento real de enchente, representando uma falha crítica: em um cenário operacional, a Defesa Civil não teria a informação necessária para alertar a população a tempo, podendo resultar em perdas de vidas, de moradia e de bens materiais. Um falso positivo ocorre quando o modelo prevê risco sem que a enchente se concretize. Embora menos grave que o cenário anterior, também gera consequências relevantes: em um cenário de uso operacional, comerciantes poderiam fechar seus estabelecimentos preventivamente, moradores poderiam deslocar-se desnecessariamente, gerando custos econômicos e desgaste da credibilidade do sistema de alerta ao longo do tempo. Dado esse desbalanceamento de consequências, o Recall (capacidade de detectar eventos reais) assume importância especial na avaliação, uma vez que minimizar falsos negativos é prioritário em sistemas de previsão voltados à proteção de vidas.
+
+Além das métricas numéricas, foi extraída a importância de cada variável (feature importance) do modelo com melhor desempenho, permitindo identificar quais fatores mais contribuem para a predição de enchentes no contexto estudado. A matriz de confusão foi utilizada para visualizar a distribuição de acertos e erros por classe, permitindo analisar a proporção entre falsos positivos e falsos negativos.
+
+Os modelos de aprendizado de máquina foram comparados tanto contra o baseline estatístico (Regressão Logística) quanto contra o baseline operacional (regra do PLANCON), a fim de quantificar o ganho efetivo proporcionado por técnicas mais sofisticadas em relação a abordagens simples.
+
+Por fim, como validação adicional, os modelos foram avaliados especificamente contra os eventos de enchente confirmados pela Defesa Civil de Sabará, verificando quantos dos eventos históricos registrados o modelo consegue identificar corretamente. Essa validação contra eventos reais constitui o teste mais relevante do ponto de vista prático, uma vez que simula o cenário de uso operacional do modelo.
+
+\subsection{Limitações da Abordagem}
+
+A principal limitação observada na aplicação de aprendizado de máquina para previsão de enchentes reside na quantidade e qualidade dos dados disponíveis, fato muito evidente no contexto brasileiro. Não há medições in loco de vazão do Rio das Velhas para o período de interesse (1997-2025), uma vez que as estações fluviométricas foram desativadas em 1965. A descarga simulada pelo GloFAS, utilizada como alternativa, possui resolução espacial de 5 km e não apresenta a mesma precisão de medições locais, introduzindo incertezas no modelo. Os dados estimados pelo modelo de transformação precipitação-vazão, por sua vez, são produzidos a partir de relações aprendidas com registros da década de 1940-1960, cujas relações hidrológicas podem não representar fielmente a realidade atual da bacia, dado processos de urbanização, mudanças no uso do solo, modificações no curso do rio e ciclos climáticos.
+
+Outra limitação refere-se à escassez de eventos confirmados de enchente. Tanto as autoridades locais quanto os portais de notícias forneceram um número reduzido de registros, dificultando a construção de um target robusto para o treinamento supervisionado. Essa escassez pode resultar em um dataset desbalanceado, com a classe positiva (enchente) sendo significativamente menos representada que a classe negativa. Em cenários de desbalanceamento, métricas como acurácia podem ser enganosas, exigindo atenção especial a métricas como F1-Score, Precision e Recall.
+
+De forma geral, quanto maior a qualidade e abrangência da base de dados, mais padrões os modelos de aprendizado de máquina conseguem identificar. A colaboração contínua com a Defesa Civil e a eventual disponibilização de novos dados de estações ativas são caminhos para mitigar essas limitações em trabalhos futuros.
+
+\section{Conclusão}
+
+O presente trabalho apresentou a proposta de desenvolvimento de um modelo de aprendizado de máquina para previsão de risco de enchentes no município de Sabará (MG), com horizonte de 24 horas e saída binária de classificação de risco. Foi realizado o levantamento e a análise crítica dos dados disponíveis, identificando tanto o potencial quanto as limitações das fontes oficiais, em especial a ausência de medições fluviométricas in loco para o período de interesse e a escassez de eventos confirmados de enchente. A revisão da literatura evidenciou que técnicas de aprendizado de máquina têm obtido resultados expressivos em problemas similares, superando métodos estatísticos tradicionais e abordagens empíricas.
+
+A metodologia proposta contempla a construção de uma base de dados para o período de 1997 a 2025, a partir de três categorias de fontes (dados medidos, simulados e de reanálise), além da definição de variáveis-alvo alinhadas aos critérios oficiais do PLANCON da Defesa Civil de Sabará. A separação temporal rigorosa entre dados de entrada (até o dia D) e variável-alvo (dia D+1) garante que o modelo seja genuinamente preditivo, sem reproduzir regras operacionais já conhecidas. Foram selecionados quatro algoritmos representando diferentes famílias de modelos, comparados contra um baseline operacional derivado do PLANCON, e definidas métricas de avaliação adequadas ao cenário de desbalanceamento esperado, incluindo a validação contra eventos reais.
+
+A colaboração estabelecida com a Defesa Civil de Sabará constitui um diferencial deste trabalho, permitindo que os critérios de alerta e os registros históricos utilizados sejam os mesmos adotados operacionalmente pelo município. Espera-se que o modelo resultante possa servir como ferramenta complementar de apoio à gestão de riscos, contribuindo para a antecipação de eventos e a proteção da população.
+
+\section{Trabalhos Futuros}
+
+Como continuidade direta deste pré-projeto, os seguintes passos serão executados na etapa de desenvolvimento:
+
+\begin{itemize}
+    \item Implementação do pipeline completo de pré-processamento, incluindo despivotamento, normalização e tratamento de lacunas;
+    \item Construção e validação do modelo de transformação precipitação-vazão utilizando os 26 anos de dados oficiais pareados disponíveis, e comparação com os dados simulados do GloFAS;
+    \item Engenharia de features com diferentes janelas temporais de chuva acumulada (3, 7, 14 e 30 dias), variáveis de defasagem e indicadores de sazonalidade;
+    \item Treinamento e otimização de hiperparâmetros dos quatro modelos selecionados (Regressão Logística, Random Forest, XGBoost e SVM);
+    \item Avaliação comparativa dos modelos utilizando as métricas definidas, com ênfase no Recall e F1-Score, e validação contra os eventos confirmados pela Defesa Civil;
+    \item Análise da importância das variáveis no modelo com melhor desempenho, identificando os fatores mais relevantes para a previsão no contexto local;
+    \item Disponibilização do código-fonte e dos resultados em repositório público para garantir reprodutibilidade.
+\end{itemize}
+
+Em uma perspectiva de longo prazo, pretende-se: (i) investigar múltiplos horizontes de previsão (D+2, D+3) para avaliar até que antecedência o modelo mantém capacidade preditiva relevante; (ii) explorar uma variável de severidade contínua (entre 0 e 1) que permita distinguir diferentes intensidades de eventos, caso dados suficientes estejam disponíveis para justificar essa escala; (iii) avaliar junto à Defesa Civil a viabilidade de integração com o sistema de alerta municipal, bem como a incorporação de dados em tempo real para previsões operacionais. A eventual disponibilização de novas estações fluviométricas e a ampliação do registro de eventos históricos poderão contribuir para o refinamento contínuo do modelo.
+
+\bibliographystyle{sbc}
+\bibliography{sbc-template}
+
+\end{document}
