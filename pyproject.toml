@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "vigia_enchente_ml"
+version = "0.1.0"
+description = "Machine Learning para previsão de enchentes em Sabará-MG"
+requires-python = ">=3.10"
+dependencies = [
+    "pandas",
+    "numpy",
+    "scikit-learn",
+    "xgboost",
+    "joblib",
+]
+
+[project.optional-dependencies]
+dev = [
+    "shap",
+    "matplotlib",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["src*"]

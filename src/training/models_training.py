@@ -5,7 +5,7 @@ from pathlib import Path
 from sklearn.linear_model import Ridge
 from sklearn.ensemble import RandomForestRegressor
 from xgboost import XGBRegressor
-from metrics.metrics import calculate_metrics
+from src.metrics.metrics import calculate_metrics
 from sklearn.preprocessing import StandardScaler
 
 ROOT = Path(__file__).parent.parent.parent
@@ -29,7 +29,7 @@ def split_database(df):
     X_train, y_train = train[FEATURE_COLS], train['target']
     X_val, y_val = validate[FEATURE_COLS], validate['target']
     X_test, y_test = test[FEATURE_COLS], test['target']
-    return X_train, X_val, X_test, y_train, y_val, y_test
+    return X_train, X_val, y_train, y_val
 
 def train_rf(X_train, y_train, X_val, y_val):
     rf = RandomForestRegressor(n_estimators=100, random_state=42)
@@ -63,17 +63,42 @@ def train_ridge(X_train, y_train, X_val, y_val):
     joblib.dump(ridge, MODELS / "ridge.joblib")
     joblib.dump(scaler, MODELS / "ridge_scaler.joblib")
 
-def baseline_climatologica(y_train, y_val):
-    media_treino = y_train.mean()
-    y_pred = np.full(len(y_val), media_treino)
-    results_baseline = {'model': 'Baseline (Validation)', 'metrics': calculate_metrics(y_val, y_pred)}
-    print(results_baseline)
+def baseline_null_mean(y_train, y_val):
+    mean_train = y_train.mean()
+    y_pred = np.full(len(y_val), mean_train)
+    results = {
+        'model': 'Baseline Null Mean (Validation)',
+        'metrics': calculate_metrics(y_val, y_pred),
+    }
+    print(results)
+    return y_pred
+
+def baseline_daily_climatology(train_df, val_df):
+    doy_mean = train_df.groupby(train_df['data'].dt.dayofyear)['target'].mean()
+    y_pred = val_df['data'].dt.dayofyear.map(doy_mean)
+    y_pred = y_pred.fillna(train_df['target'].mean())
+    results = {
+        'model': 'Baseline Daily Climatology (Validation)',
+        'metrics': calculate_metrics(val_df['target'], y_pred),
+    }
+    print(results)
+    return y_pred
 
 def train_all_models():
     final_database = pd.read_csv(PROCESSED / "final_database.csv", parse_dates=['data'])
-    X_train, X_val, y_train, y_val = split_database(final_database)
+    final_database = final_database.sort_values('data').reset_index(drop=True)
+    train_df = final_database[final_database["data"].between("1997-01-01", "2016-12-31")].copy()
+    val_df = final_database[final_database["data"].between("2017-01-01", "2021-12-31")].copy()
+    
+    X_train, y_train = train_df[FEATURE_COLS], train_df['target']
+    X_val, y_val = val_df[FEATURE_COLS], val_df['target']
+    
     train_rf(X_train, y_train, X_val, y_val)
     train_xgb(X_train, y_train, X_val, y_val)
     train_ridge(X_train, y_train, X_val, y_val)
-    baseline_climatologica(y_train, y_val)
+    baseline_null_mean(y_train, y_val)
+    baseline_daily_climatology(train_df, val_df)
     print(f"\nModelos salvos em: {MODELS}")
+
+if __name__ == "__main__":
+    train_all_models()
