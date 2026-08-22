@@ -4,10 +4,12 @@ ROOT = Path(__file__).parent.parent.parent
 RAW = ROOT / "data" / "raw"
 PROCESSED = ROOT / "data" / "processed"
 MODELS = ROOT / "models"
+RESULTS = ROOT / "results"
 
 RAW.mkdir(parents=True, exist_ok=True)
 MODELS.mkdir(parents=True, exist_ok=True)
 PROCESSED.mkdir(parents=True, exist_ok=True)
+RESULTS.mkdir(parents=True, exist_ok=True)
 
 TRAIN_START = '1997-01-01'
 TRAIN_END = '2016-12-31'
