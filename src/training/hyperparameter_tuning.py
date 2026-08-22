@@ -19,7 +19,7 @@ FEATURE_COLS = [
 ]
 
 
-def tune_rf(X, y, tscv):
+def tune_rf(X, y, time_series):
     print("Tuning Random Forest...")
     params = {
         'n_estimators': [100, 200],
@@ -30,7 +30,7 @@ def tune_rf(X, y, tscv):
         RandomForestRegressor(random_state=42, n_jobs=-1),
         params,
         scoring=make_scorer(calculate_kge, greater_is_better=True),
-        cv=tscv,
+        cv=time_series,
         verbose=1,
         n_jobs=-1
     )
@@ -40,7 +40,7 @@ def tune_rf(X, y, tscv):
     return grid.best_params_, grid.best_score_
 
 
-def tune_xgb(X, y, tscv):
+def tune_xgb(X, y, time_series):
     print("\nTuning XGBoost...")
     params = {
         'n_estimators': [100, 200],
@@ -51,7 +51,7 @@ def tune_xgb(X, y, tscv):
         XGBRegressor(random_state=42, n_jobs=-1),
         params,
         scoring=make_scorer(calculate_kge, greater_is_better=True),
-        cv=tscv,
+        cv=time_series,
         verbose=1,
         n_jobs=-1
     )
