@@ -4,7 +4,7 @@ from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import GridSearchCV, TimeSeriesSplit
 from sklearn.metrics import make_scorer
 from xgboost import XGBRegressor
-from metrics.metrics import calculate_kge
+from src.metrics.metrics import calculate_kge
 
 
 ROOT = Path(__file__).parent.parent.parent

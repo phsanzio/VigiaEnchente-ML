@@ -8,10 +8,12 @@ __pycache__/
 *.py[cod]
 *$py.class
 *.so
+*.pyc
 
 # Egg info
 *.egg-info/
 *.egg
+vigia_enchente_ml.egg-info/
 
 # IDE
 .idea/
@@ -23,11 +25,8 @@ __pycache__/
 .DS_Store
 Thumbs.db
 
-# Models (large files - optional to track)
-# models/*.joblib
-
-# Data (usually too large)
-# data/
+# Models (large binary files)
+models/*.joblib
 
 # Jupyter
 .ipynb_checkpoints/
