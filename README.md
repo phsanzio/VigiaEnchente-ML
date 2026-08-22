@@ -71,6 +71,71 @@ vigiaenchente-ml/
     └── coleta_glofas.py                  # Coleta dados GloFAS
 ```
 
+## Instalação e Execução
+
+### Pré-requisitos
+- Python 3.10+
+- Git
+
+### macOS / Linux
+
+```bash
+# Clone o repositório
+git clone https://github.com/phsanzio/VigiaEnchente-ML.git
+cd VigiaEnchente-ML
+
+# Crie e ative o ambiente virtual
+python3 -m venv .venv
+source .venv/bin/activate
+
+# Instale as dependências
+pip install -e .
+
+# Execute o treinamento
+python -m src.training.models_training
+```
+
+### Windows (PowerShell)
+
+```powershell
+# Clone o repositório
+git clone https://github.com/phsanzio/VigiaEnchente-ML.git
+cd VigiaEnchente-ML
+
+# Crie e ative o ambiente virtual
+python -m venv .venv
+.venv\Scripts\Activate.ps1
+
+# Instale as dependências
+pip install -e .
+
+# Execute o treinamento
+python -m src.training.models_training
+```
+
+> **Nota:** Se der erro de permissão no PowerShell, execute primeiro:
+> ```powershell
+> Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+> ```
+
+### Windows (CMD)
+
+```cmd
+# Clone o repositório
+git clone https://github.com/phsanzio/VigiaEnchente-ML.git
+cd VigiaEnchente-ML
+
+# Crie e ative o ambiente virtual
+python -m venv .venv
+.venv\Scripts\activate.bat
+
+# Instale as dependências
+pip install -e .
+
+# Execute o treinamento
+python -m src.training.models_training
+```
+
 ## Execução
 
 ```bash
