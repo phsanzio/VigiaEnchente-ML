@@ -1,53 +1,40 @@
-import pandas as pd
+import json
 import numpy as np
 import joblib
-from pathlib import Path
 from sklearn.linear_model import Ridge
 from sklearn.ensemble import RandomForestRegressor
 from xgboost import XGBRegressor
 from src.metrics.metrics import calculate_metrics
+from src.utils.data_utils import get_train_df, get_val_df
 from sklearn.preprocessing import StandardScaler
+from src.configuration.config import MODELS, FEATURE_COLS
 
-ROOT = Path(__file__).parent.parent.parent
-PROCESSED = ROOT / "data" / "processed"
-MODELS = ROOT / "models"
-MODELS.mkdir(parents=True, exist_ok=True)
 
-FEATURE_COLS = [
-    'chuva_mm', 'temp_media', 'temp_max', 'temp_min', 'umidade_media',
-    'chuva_3d', 'chuva_7d', 'chuva_14d', 'chuva_30d', 'chuva_60d', 'chuva_90d',
-    'api_7d', 'api_30d',
-    'chuva_ontem', 'chuva_anteontem', 'chuva_3d_atras', 'chuva_4d_atras',
-    'sin_doy', 'cos_doy', 'vpd'
-]
-
-def split_database(df):
-    df = df.sort_values('data').reset_index(drop=True)
-    train = df[df["data"].between("1997-01-01", "2016-12-31")].copy()
-    validate = df[df["data"].between("2017-01-01", "2021-12-31")].copy()
-    test = df[df["data"] >= "2022-01-01"].copy()
-    X_train, y_train = train[FEATURE_COLS], train['target']
-    X_val, y_val = validate[FEATURE_COLS], validate['target']
-    X_test, y_test = test[FEATURE_COLS], test['target']
-    return X_train, X_val, y_train, y_val
-
-def train_rf(X_train, y_train, X_val, y_val):
-    rf = RandomForestRegressor(n_estimators=100, random_state=42)
+def train_rf(X_train, y_train, X_val, y_val, params=None):
+    model_params = params if params else {'n_estimators': 100, 'random_state': 42}
+    if 'random_state' not in model_params:
+        model_params['random_state'] = 42
+    
+    rf = RandomForestRegressor(**model_params)
     rf.fit(X_train, y_train)
     
     y_pred_val = rf.predict(X_val)
-    results_val = {'model': 'RandomForest (Validation)', 'metrics': calculate_metrics(y_val, y_pred_val)}
-    print(results_val)
+    results = {'model': 'RandomForest (Validation)', 'metrics': calculate_metrics(y_val, y_pred_val)}
+    print(results)
     
     joblib.dump(rf, MODELS / "random_forest.joblib")
 
-def train_xgb(X_train, y_train, X_val, y_val):
-    xgb = XGBRegressor(n_estimators=100, random_state=42)
+def train_xgb(X_train, y_train, X_val, y_val, params=None):
+    model_params = params if params else {'n_estimators': 100, 'random_state': 42}
+    if 'random_state' not in model_params:
+        model_params['random_state'] = 42
+    
+    xgb = XGBRegressor(**model_params)
     xgb.fit(X_train, y_train)
     
     y_pred_val = xgb.predict(X_val)
-    results_val = {'model': 'XGBoost (Validation)', 'metrics': calculate_metrics(y_val, y_pred_val)}
-    print(results_val)
+    results = {'model': 'XGBoost (Validation)', 'metrics': calculate_metrics(y_val, y_pred_val)}
+    print(results)
     
     joblib.dump(xgb, MODELS / "xgboost.joblib")
 
@@ -58,8 +45,8 @@ def train_ridge(X_train, y_train, X_val, y_val):
     X_val_scaled = scaler.transform(X_val)
     ridge.fit(X_train_scaled, y_train)
     y_pred_ridge = ridge.predict(X_val_scaled)
-    results_ridge = {'model': 'Ridge (Validation)', 'metrics': calculate_metrics(y_val, y_pred_ridge)}
-    print(results_ridge)
+    results = {'model': 'Ridge (Validation)', 'metrics': calculate_metrics(y_val, y_pred_ridge)}
+    print(results)
     joblib.dump(ridge, MODELS / "ridge.joblib")
     joblib.dump(scaler, MODELS / "ridge_scaler.joblib")
 
@@ -85,10 +72,8 @@ def baseline_daily_climatology(train_df, val_df):
     return y_pred
 
 def train_all_models():
-    final_database = pd.read_csv(PROCESSED / "final_database.csv", parse_dates=['data'])
-    final_database = final_database.sort_values('data').reset_index(drop=True)
-    train_df = final_database[final_database["data"].between("1997-01-01", "2016-12-31")].copy()
-    val_df = final_database[final_database["data"].between("2017-01-01", "2021-12-31")].copy()
+    train_df = get_train_df()
+    val_df = get_val_df()
     
     X_train, y_train = train_df[FEATURE_COLS], train_df['target']
     X_val, y_val = val_df[FEATURE_COLS], val_df['target']
@@ -99,6 +84,27 @@ def train_all_models():
     baseline_null_mean(y_train, y_val)
     baseline_daily_climatology(train_df, val_df)
     print(f"\nModelos salvos em: {MODELS}")
+
+def retrain_best_models():
+    params_path = MODELS / "best_params.json"
+    
+    if not params_path.exists():
+        print("Arquivo best_params.json nao encontrado. Rode o tuning primeiro!")
+        return
+    
+    with open(params_path, 'r') as f:
+        best_params = json.load(f)
+    
+    train_df = get_train_df()
+    val_df = get_val_df()
+    
+    X_train, y_train = train_df[FEATURE_COLS], train_df['target']
+    X_val, y_val = val_df[FEATURE_COLS], val_df['target']
+    
+    print("Retreinando com parametros otimizados...")
+    train_rf(X_train, y_train, X_val, y_val, params=best_params.get("random_forest"))
+    train_xgb(X_train, y_train, X_val, y_val, params=best_params.get("xgboost"))
+    print(f"\nModelos otimizados salvos em: {MODELS}")
 
 if __name__ == "__main__":
     train_all_models()

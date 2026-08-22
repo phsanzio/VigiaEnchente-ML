@@ -113,7 +113,27 @@ Foram selecionados quatro algoritmos de aprendizado de máquina, representando d
 
 Adicionalmente, como baseline operacional, foi implementada uma regra simples baseada diretamente nos critérios do PLANCON: se a precipitação acumulada nos 3 dias anteriores (D-2, D-1, D) excede 100mm, classifica-se o dia D+1 como risco. Essa regra permite verificar se os modelos de aprendizado de máquina efetivamente superam uma heurística operacional simples, justificando a complexidade adicional.
 
-Para cada modelo, foram avaliadas diferentes configurações de hiperparâmetros em busca da combinação que maximiza o desempenho nas métricas definidas. Todo o desenvolvimento foi realizado em Python utilizando a biblioteca scikit-learn \cite{pedregosa2011}, e o código-fonte encontra-se disponível em repositório público no GitHub para garantir a reprodutibilidade do trabalho.
+Para cada modelo, foram avaliadas diferentes configurações de hiperparâmetros em busca da combinação que maximiza o desempenho nas métricas definidas.
+
+Em substituição à exaustiva busca em grelha (\textit{Grid Search}), que se torna computacionalmente inviável diante de um espaço paramétrico amplo (fenômeno conhecido como Maldição da Dimensionalidade), adotou-se a estratégia de Busca Aleatória (\textit{Randomized Search}). Conforme provado matematicamente por Bergstra e Bengio \cite{bergstra2012}, a amostragem aleatória é estatisticamente mais eficiente para otimização de hiperparâmetros. Os autores demonstram que, ao assumir que a configuração ótima ocupa uma fração de pelo menos 5\% de todo o espaço de busca, a probabilidade $P$ de encontrar uma configuração dentro desse limiar de excelência com $n$ tentativas independentes é dada pela equação:
+
+\begin{equation}
+    P = 1 - (1 - 0.05)^n
+\end{equation}
+
+Ao estipular exatamente $n = 60$ iterações para cada algoritmo, obtém-se $P \approx 0.953$. Isso significa que, com apenas 60 amostragens, garante-se aproximadamente 95\% de confiança estatística de que a combinação de hiperparâmetros selecionada encontra-se entre as 5\% melhores possíveis, otimizando o custo computacional sem comprometer a robustez métrica do modelo.
+
+Para maximizar a eficiência da amostragem aleatória, o espaço hiperparamétrico não foi definido por valores discretos fixos, mas sim por distribuições estatísticas contínuas e discretas (utilizando as funções uniforme, log-uniforme e de números inteiros aleatórios). Essa modelagem paramétrica contínua permite que o algoritmo explore valores intermediários não óbvios (como coeficientes de regularização fracionados) que seriam impossíveis de mapear manualmente, aumentando a precisão da otimização para a métrica KGE.
+
+O espaço paramétrico submetido à busca não abrangeu a totalidade dos hiperparâmetros disponíveis nas bibliotecas, mas consistiu em um subconjunto selecionado com base nas características de séries temporais hidrometeorológicas. A literatura indica que a inclusão de parâmetros irrelevantes degrada a eficiência da busca aleatória. Portanto, a otimização concentrou-se estritamente em três eixos teóricos fundamentais para mitigar problemas de ruído e multicolinearidade climática:
+
+\begin{enumerate}
+    \item \textbf{Controle de Crescimento} (\texttt{max\_depth}, \texttt{min\_samples\_leaf} e \texttt{min\_child\_weight}), visando impedir a memorização de anomalias meteorológicas isoladas;
+    \item \textbf{Injeção Estocástica e Descorrelação} (\texttt{max\_features}, \texttt{max\_samples}, \texttt{subsample} e \texttt{colsample\_bytree}), que força os algoritmos a explorarem preditores secundários, contornando a alta colinearidade entre variáveis de precipitação acumulada; e
+    \item \textbf{Regularização Explícita} (\texttt{gamma} e \texttt{reg\_lambda}), essencial para penalizar pesos excessivos e suavizar previsões em regimes de alta variância, características basilares avaliadas pela métrica KGE.
+\end{enumerate}
+
+Todo o desenvolvimento foi realizado em Python utilizando a biblioteca scikit-learn \cite{pedregosa2011}, e o código-fonte encontra-se disponível em repositório público no GitHub para garantir a reprodutibilidade do trabalho.
 
 \subsection{Avaliação dos Modelos}
 

@@ -1,31 +1,28 @@
 import pandas as pd
-from pathlib import Path
+from src.configuration.config import PROCESSED, RAW, TRAIN_START, TRAIN_END, VAL_START, VAL_END, TEST_START
 
-ROOT = Path(__file__).parent.parent.parent
-PROCESSED = ROOT / "data" / "processed"
 
-FEATURE_COLS = [
-    'chuva_mm', 'temp_media', 'temp_max', 'temp_min', 'umidade_media',
-    'chuva_3d', 'chuva_7d', 'chuva_14d', 'chuva_30d', 'chuva_60d', 'chuva_90d',
-    'api_7d', 'api_30d',
-    'chuva_ontem', 'chuva_anteontem', 'chuva_3d_atras', 'chuva_4d_atras',
-    'sin_doy', 'cos_doy', 'vpd'
-]
+def get_final_database():
+    df = pd.read_csv(PROCESSED / "final_database.csv", parse_dates=['data'])
+    return df.sort_values('data').reset_index(drop=True)
 
-def get_split_final_database():
-  final_database = pd.read_csv(PROCESSED / "final_database.csv", parse_dates=['data'])
-  return split_data(final_database)
+def get_train_df():
+    df = get_final_database()
+    return df[df['data'].between(TRAIN_START, TRAIN_END)].copy()
 
-def split_data(final_database):
-    train = final_database[final_database['data'] < '2022-01-01']
-    validate = final_database[(final_database['data'] >= '2022-01-01') & (final_database['data'] < '2023-01-01')]
-    test = final_database[final_database['data'] >= '2023-01-01']
-    
-    X_train, y_train = train[FEATURE_COLS], train['target']
-    X_val, y_val = validate[FEATURE_COLS], validate['target']
-    X_test, y_test = test[FEATURE_COLS], test['target']
-    
-    return X_train, X_val, y_train, y_val, X_test, y_test
+def get_val_df():
+    df = get_final_database()
+    return df[df['data'].between(VAL_START, VAL_END)].copy()
 
-def get_raw_data():
-   pass
+def get_test_df():
+    df = get_final_database()
+    return df[df['data'] >= TEST_START].copy()
+
+def get_chuva_raw():
+    return pd.read_csv(RAW / "ana_chuva_sabara_1943006.csv", parse_dates=['data'])
+
+def get_vazao_raw():
+    return pd.read_csv(RAW / "glofas_vazao_sabara.csv", parse_dates=['data'])
+
+def get_meteo_raw():
+    return pd.read_csv(RAW / "inmet_meteo_bh_83587.csv", parse_dates=['data'])
