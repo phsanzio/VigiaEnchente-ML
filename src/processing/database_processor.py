@@ -71,21 +71,15 @@ def processar_inmet(inmet_raw):
     return inmet
 
 
-def processar_bases(chuvas_raw, inmet_raw, vazao_raw):
+def process_database():
+    chuvas_raw = pd.read_csv(RAW / "ana_chuva_sabara_1943006.csv", encoding="latin-1", sep=";", skiprows=12, decimal=",")
+    inmet_raw = pd.read_csv(RAW / "inmet_meteo_bh_83587.csv", sep=";", skiprows=9, encoding="latin-1")
+    vazao_raw = pd.read_csv(RAW / "glofas_vazao_sabara.csv")
     chuvas = processar_chuvas(chuvas_raw)
     vazao = processar_vazao(vazao_raw)
     inmet = processar_inmet(inmet_raw)
     
     unified_database = pd.merge(chuvas[["data", "chuva_mm"]], vazao, on="data", how="inner")
     unified_database = pd.merge(unified_database, inmet, on="data", how="inner")
-    return unified_database
-
-
-if __name__ == "__main__":
-    chuvas_raw = pd.read_csv(RAW / "ana_chuva_sabara_1943006.csv", encoding="latin-1", sep=";", skiprows=12, decimal=",")
-    inmet_raw = pd.read_csv(RAW / "inmet_meteo_bh_83587.csv", sep=";", skiprows=9, encoding="latin-1")
-    vazao_raw = pd.read_csv(RAW / "glofas_vazao_sabara.csv")
-    
-    unified_database = processar_bases(chuvas_raw, inmet_raw, vazao_raw)
     unified_database.to_csv(PROCESSED / "unified_database.csv", index=False)
-    
+
